@@ -27,6 +27,6 @@ fabric.properties
 venv
 
 # Project specific ignores
-./checkpoints/
-./data/
-./data_processed/
+checkpoints/**
+data/**
+data_processed/**
