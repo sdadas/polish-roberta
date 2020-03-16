@@ -19,7 +19,9 @@ TASKS = {
     "SICK-E":          SICKEntailmentTask,
     "SICK-R":          SICKRelatednessTask,
     "8TAGS":           EightTagsTask,
-    "CBD":             CBDTask
+    "CBD":             CBDTask,
+    "CDS-E":           CDSEntailmentTask,
+    "CDS-R":           CDSRelatednessTask
 }
 
 

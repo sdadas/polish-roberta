@@ -138,6 +138,7 @@ class SICKEntailmentTask(SICKTask):
     def __init__(self):
         self._spec = TaskSpecification("SICK", "classification", 3, 2)
         self._spec.output_dir = "SICK-E"
+        self._spec.evaluation_metric = self._spec.accuracy
 
     def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
         return DataExample([input1, input2], entailment)
@@ -151,6 +152,34 @@ class SICKRelatednessTask(SICKTask):
     def __init__(self):
         self._spec = TaskSpecification("SICK", "regression", 1, 2)
         self._spec.output_dir = "SICK-R"
+
+    def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
+        label = "%.5f" % (relatedness / 5.0,)
+        return DataExample([input1, input2], label)
+
+    def spec(self) -> TaskSpecification:
+        return self._spec
+
+
+class CDSEntailmentTask(SICKTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("CDS", "classification", 3, 2)
+        self._spec.output_dir = "CDS-E"
+        self._spec.evaluation_metric = self._spec.accuracy
+
+    def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
+        return DataExample([input1, input2], entailment)
+
+    def spec(self) -> TaskSpecification:
+        return self._spec
+
+
+class CDSRelatednessTask(SICKTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("CDS", "regression", 1, 2)
+        self._spec.output_dir = "CDS-R"
 
     def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
         label = "%.5f" % (relatedness / 5.0,)
