@@ -18,7 +18,8 @@ TASKS = {
     "WCCRS_MEDICINE":  WCCRSMedicineTask,
     "SICK-E":          SICKEntailmentTask,
     "SICK-R":          SICKRelatednessTask,
-    "8TAGS":           EightTagsTask
+    "8TAGS":           EightTagsTask,
+    "CBD":             CBDTask
 }
 
 
@@ -42,9 +43,10 @@ class TaskRunner(object):
 
     def evaluate_task(self):
         checkpoints_output_dir = os.path.join("checkpoints", self.task.spec().output_dir)
+        checkpoint_file = "checkpoint_last.pt" if self.task.spec().no_dev_set else "checkpoint_best.pt"
         loaded = hub_utils.from_pretrained(
             model_name_or_path=checkpoints_output_dir,
-            checkpoint_file="checkpoint_best.pt",
+            checkpoint_file=checkpoint_file,
             data_name_or_path=self.task_output_dir,
             bpe="sentencepiece",
             sentencepiece_vocab=os.path.join("models", "sentencepiece.model"),

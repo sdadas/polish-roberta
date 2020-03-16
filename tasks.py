@@ -1,3 +1,4 @@
+import logging
 import os
 from abc import ABC, abstractmethod
 from typing import Union, List, Iterable, Callable
@@ -23,6 +24,7 @@ class TaskSpecification(object):
         self.num_labels: int = num_labels
         self.num_inputs: int = num_inputs
         self.evaluation_metric: Callable = self.f1 if task_type == "classification" else self.pearson
+        self.no_dev_set = False
 
     def accuracy(self, y_true, y_pred):
         return accuracy_score(y_true, y_pred)
@@ -31,8 +33,16 @@ class TaskSpecification(object):
         return pearsonr(y_true, y_pred)[0]
 
     def f1(self, y_true, y_pred):
-        average = "binary" if self.num_labels <= 2 else "weighted"
-        return precision_recall_fscore_support(y_true, y_pred, average=average)[2]
+        res = precision_recall_fscore_support(y_true, y_pred, average="weighted")
+        logging.debug(res)
+        return res[2]
+
+    def binary_f1(self, y_true, y_pred):
+        y_true = [int(val) for val in y_true]
+        y_pred = [int(val) for val in y_pred]
+        res = precision_recall_fscore_support(y_true, y_pred, average="binary")
+        logging.debug(res)
+        return res[2]
 
 
 class BaseTask(ABC):
@@ -107,13 +117,13 @@ class SICKTask(BaseTask):
 
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
         input_path = self.get_split_path(data_path, split)
-
+        normalizer = TextNormalizer()
         with open(input_path, "r", encoding="utf-8") as input_file:
             for idx, line in enumerate(input_file):
                 if idx == 0: continue
                 values = line.split("\t")
-                input1: str = values[1].strip()
-                input2: str = values[2].strip()
+                input1: str = normalizer.process(values[1].strip())
+                input2: str = normalizer.process(values[2].strip())
                 relatedness: float = float(values[3].strip())
                 entailment: str = values[4].strip()
                 yield self.create_example(input1, input2, relatedness, entailment)
@@ -145,6 +155,33 @@ class SICKRelatednessTask(SICKTask):
     def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
         label = "%.5f" % (relatedness / 5.0,)
         return DataExample([input1, input2], label)
+
+    def spec(self) -> TaskSpecification:
+        return self._spec
+
+
+class CBDTask(BaseTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("CBD", "classification", 2, 1)
+        self._spec.no_dev_set = True
+        self._spec.evaluation_metric = self._spec.binary_f1
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        split_name = "training" if split == "train" else split
+        file_pattern = "{}_set_clean_only_{}.txt"
+        text_path = os.path.join(data_path, self._spec.task_dir, file_pattern.format(split_name, "text"))
+        tags_path = os.path.join(data_path, self._spec.task_dir, file_pattern.format(split_name, "tags"))
+        normalizer = TextNormalizer(detokenize=False)
+        with open(text_path, "r", encoding="utf-8") as text_file, open(tags_path, "r", encoding="utf-8") as tags_file:
+            text_lines = text_file.readlines()
+            tags_lines = tags_file.readlines()
+            assert len(text_lines) == len(tags_lines)
+            for idx in range(len(text_lines)):
+                text = normalizer.process(text_lines[idx].strip())
+                text = text.replace("@anonymized_account", "@ użytkownik")
+                label = tags_lines[idx].strip()
+                yield DataExample(text, label)
 
     def spec(self) -> TaskSpecification:
         return self._spec

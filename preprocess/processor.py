@@ -28,6 +28,7 @@ class TaskProcessor(object):
         self._fairseq_preprocess()
 
     def _prepare_split(self, split: str):
+        if split == "dev" and self.task.spec().no_dev_set: return
         num_inputs: int = self.task.spec().num_inputs
         num_outputs: int = num_inputs + 1
         outputs: List[TextIO] = self._open_outputs(split, num_inputs)
@@ -90,6 +91,7 @@ class TaskProcessor(object):
         cmd = ["fairseq-preprocess", "--only-source", "--workers", str(cpus), "--destdir", destdir]
         for split in ("train", "dev", "test"):
             if input_name == "label" and split == "test": continue
+            if split == "dev" and self.task.spec().no_dev_set: continue
             file_name = split + "." + input_name
             pref = os.path.join(self.task_output_path, file_name)
             option = "--validpref" if split == "dev" else f"--{split}pref"

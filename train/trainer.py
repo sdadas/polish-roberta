@@ -59,8 +59,14 @@ class TaskTrainer(object):
             "--find-unused-parameters",
             "--log-format", "simple",
             "--log-interval", "5",
-            "--save-dir", os.path.join("checkpoints", self.task.spec().output_dir)
+            "--save-dir", os.path.join("checkpoints", self.task.spec().output_dir),
+            "--no-epoch-checkpoints"
         ]
+        if self.task.spec().no_dev_set:
+            cmd.extend([
+                "--disable-validation",
+                "--valid-subset", "train"
+            ])
         task_type = self.task.spec().task_type
         if task_type == "classification":
             cmd.extend([
