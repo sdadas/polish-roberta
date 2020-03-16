@@ -20,7 +20,7 @@ class TaskTrainer(object):
         self.fp16 = fp16
 
     def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10):
-        self._run_fairseq_train(1, 16, max_epoch=train_epochs)
+        self._run_fairseq_train(max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
 
     def _run_fairseq_train(self, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
         batch_size: int = max_sentences * update_freq
