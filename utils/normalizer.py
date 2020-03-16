@@ -107,5 +107,7 @@ class TextNormalizer(object):
     def process(self, text: str) -> str:
         if self._replace_emoji:
             text = "".join((emoji.get(c, c) for c in text))
-        tokens: List[str] = text.split()
-        return self._moses.detokenize(tokens)
+        if self._detokenize:
+            tokens: List[str] = text.split()
+            text = self._moses.detokenize(tokens)
+        return text
