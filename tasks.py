@@ -23,7 +23,7 @@ class TaskSpecification(object):
         self.task_type: str = task_type
         self.num_labels: int = num_labels
         self.num_inputs: int = num_inputs
-        self.evaluation_metric: Callable = self.f1 if task_type == "classification" else self.pearson
+        self.evaluation_metric: Callable = self.accuracy if task_type == "classification" else self.pearson
         self.no_dev_set = False
 
     def accuracy(self, y_true, y_pred):
