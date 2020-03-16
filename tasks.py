@@ -4,6 +4,8 @@ from typing import Union, List, Iterable, Callable
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score
 from scipy.stats import pearsonr
 
+from utils.normalizer import TextNormalizer
+
 
 class DataExample(object):
 
@@ -49,15 +51,20 @@ class BaseTask(ABC):
             raise FileNotFoundError(input_path)
         return input_path
 
-    def read_simple(self, data_path: str, split: str, separator: str=" ", label_first: bool=True) -> Iterable[DataExample]:
+    def read_simple(self, data_path: str, split: str, separator: str=" ", label_first: bool=True, normalize: bool=True):
         label_idx = 0 if label_first else 1
         text_idx = 1 if label_first else 0
         input_path = self.get_split_path(data_path, split)
+        normalize_func = lambda val: val
+        if normalize:
+            normalizer = TextNormalizer()
+            normalize_func = lambda val: normalizer.process(val)
         with open(input_path, "r", encoding="utf-8") as input_file:
             for line in input_file:
                 values = line.split(sep=separator, maxsplit=1)
                 label = values[label_idx]
                 text = values[text_idx].strip()
+                text = normalize_func(text)
                 yield DataExample(text, label)
 
 class WCCRSHotelsTask(BaseTask):
