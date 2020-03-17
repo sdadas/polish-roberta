@@ -66,7 +66,8 @@ class TaskRunner(object):
 
 
 def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed", model_dir: str="models",
-              tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16):
+              tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
+              evaluation_only: bool=False):
     if tasks is None:
         task_names = [key for key in TASKS.keys()]
         task_classes = [val for val in TASKS.values()]
@@ -77,8 +78,9 @@ def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed"
     for task_class in task_classes:
         task = task_class()
         runner: TaskRunner = TaskRunner(task, input_dir, output_dir, model_dir)
-        runner.prepare_task()
-        runner.train_task(arch, train_epochs, fp16, max_sentences, update_freq)
+        if not evaluation_only:
+            runner.prepare_task()
+            runner.train_task(arch, train_epochs, fp16, max_sentences, update_freq)
         runner.evaluate_task()
 
 
