@@ -29,9 +29,9 @@ class TaskEvaluator(object):
             logits = True
         for record in self.task.read(self.data_path, "test"):
             tokens = self.model.encode(*record.inputs)
+            if tokens.size()[0] > 512:
+                tokens = tokens[0:512]
             prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits)
-            if prediction.size()[0] > 512:
-                prediction = prediction[0:512]
             y_true.append(get_true(record))
             y_pred.append(get_pred(prediction))
         score = self.task.spec().evaluation_metric(y_true, y_pred)
