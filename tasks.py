@@ -214,3 +214,49 @@ class CBDTask(BaseTask):
 
     def spec(self) -> TaskSpecification:
         return self._spec
+
+
+class PolEmoINTask(BaseTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("POLEMO", "classification", 4, 1)
+        self._spec.output_dir = "POLEMO-IN"
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        split = split if split == "train" else f"in-{split}"
+        path = self.get_split_path(data_path, split)
+        normalizer = TextNormalizer()
+        with open(path, "r", encoding="utf-8") as input_file:
+            for line in input_file:
+                words = line.split()
+                label = words[-1]
+                text = " ".join(words[0:-1])
+                text = text.replace(" em ", "em ").replace(" śmy ", "śmy ").replace(" m ", "m ")
+                text = normalizer.process(text)
+                yield DataExample(text, label)
+
+    def spec(self) -> TaskSpecification:
+        return self._spec
+
+
+class PolEmoOUTTask(BaseTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("POLEMO", "classification", 4, 1)
+        self._spec.output_dir = "POLEMO-OUT"
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        split = split if split == "train" else f"out-{split}"
+        path = self.get_split_path(data_path, split)
+        normalizer = TextNormalizer()
+        with open(path, "r", encoding="utf-8") as input_file:
+            for line in input_file:
+                words = line.split()
+                label = words[-1]
+                text = " ".join(words[0:-1])
+                text = text.replace(" em ", "em ").replace(" śmy ", "śmy ").replace(" m ", "m ")
+                text = normalizer.process(text)
+                yield DataExample(text, label)
+
+    def spec(self) -> TaskSpecification:
+        return self._spec

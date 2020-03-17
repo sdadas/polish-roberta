@@ -21,7 +21,9 @@ TASKS = {
     "8TAGS":           EightTagsTask,
     "CBD":             CBDTask,
     "CDS-E":           CDSEntailmentTask,
-    "CDS-R":           CDSRelatednessTask
+    "CDS-R":           CDSRelatednessTask,
+    "POLEMO-IN":       PolEmoINTask,
+    "POLEMO-OUT":      PolEmoOUTTask
 }
 
 
