@@ -23,7 +23,16 @@ TASKS = {
     "CDS-E":           CDSEntailmentTask,
     "CDS-R":           CDSRelatednessTask,
     "POLEMO-IN":       PolEmoINTask,
-    "POLEMO-OUT":      PolEmoOUTTask
+    "POLEMO-OUT":      PolEmoOUTTask,
+    "KLEJ-NKJP":       KLEJNKJPTask,
+    "KLEJ-CDS-E":      KLEJCDSEntailmentTask,
+    "KLEJ-CDS-R":      KLEJCDSRelatednessTask,
+    "KLEJ-CBD":        KLEJCBDTask,
+    "KLEJ-POLEMO-IN":  KLEJPolEmoINTask,
+    "KLEJ-POLEMO-OUT": KLEJPolEmoOUTTask,
+    "KLEJ-DYK":        KLEJDYKTask,
+    "KLEJ-PSC":        KLEJPSCTask,
+    "KLEJ-ECR":        KLEJECRTask
 }
 
 
@@ -34,7 +43,7 @@ class TaskRunner(object):
         self.input_dir: str = input_dir
         self.output_dir: str = output_dir
         self.model_dir: str = model_dir
-        self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_dir}-bin")
+        self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
 
     def prepare_task(self):
         processor = TaskProcessor(self.task, self.input_dir, self.output_dir, self.model_dir)
@@ -46,7 +55,7 @@ class TaskRunner(object):
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
     def evaluate_task(self):
-        checkpoints_output_dir = os.path.join("checkpoints", self.task.spec().output_dir)
+        checkpoints_output_dir = os.path.join("checkpoints", self.task.spec().output_path())
         checkpoint_file = "checkpoint_last.pt" if self.task.spec().no_dev_set else "checkpoint_best.pt"
         loaded = hub_utils.from_pretrained(
             model_name_or_path=checkpoints_output_dir,
@@ -75,7 +84,8 @@ def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed"
         task_names = [task_name.strip() for task_name in tasks.split(",")]
         task_classes = [TASKS.get(task_name) for task_name in task_names]
     logging.info("Running training and evaluation for tasks %s", task_names.__repr__())
-    for task_class in task_classes:
+    for idx, task_class in enumerate(task_classes):
+        if task_class is None: raise Exception(f"Unknown task {task_names[idx]}")
         task = task_class()
         runner: TaskRunner = TaskRunner(task, input_dir, output_dir, model_dir)
         if not evaluation_only:

@@ -16,7 +16,7 @@ class TaskProcessor(object):
         self.data_path: str = data_path
         self.model_path = model_path
         self.output_path = output_path
-        self.task_output_path = os.path.join(self.output_path, task.spec().output_dir)
+        self.task_output_path = os.path.join(self.output_path, task.spec().output_path())
         if not os.path.exists(self.task_output_path):
             os.makedirs(self.task_output_path, exist_ok=True)
 
@@ -35,7 +35,7 @@ class TaskProcessor(object):
         for record in self.task.read(self.data_path, split):
             rec_out = [record.label]
             rec_out.extend(record.inputs)
-            assert len(rec_out) == num_outputs
+            assert len(rec_out) == num_outputs, rec_out
             for idx in range(num_outputs):
                 outputs[idx].write(rec_out[idx])
                 outputs[idx].write("\n")

@@ -12,7 +12,7 @@ class TaskTrainer(object):
         self.task: BaseTask = task
         self.train_size: int = train_size
         self.data_path: str = data_path
-        self.task_data_path: str = os.path.join(self.data_path, task.spec().output_dir + "-bin")
+        self.task_data_path: str = os.path.join(self.data_path, task.spec().output_path() + "-bin")
         self.model_path: str = model_path
         self.checkpoint: str = checkpoint
         self.arch: str = arch
@@ -59,7 +59,7 @@ class TaskTrainer(object):
             "--find-unused-parameters",
             "--log-format", "simple",
             "--log-interval", "5",
-            "--save-dir", os.path.join("checkpoints", self.task.spec().output_dir),
+            "--save-dir", os.path.join("checkpoints", self.task.spec().output_path()),
             "--no-epoch-checkpoints"
         ]
         if self.task.spec().no_dev_set:

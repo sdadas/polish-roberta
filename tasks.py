@@ -1,9 +1,11 @@
 import logging
 import os
 from abc import ABC, abstractmethod
-from typing import Union, List, Iterable, Callable
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score
+from collections import defaultdict
+from typing import Union, List, Iterable, Callable, Dict
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, mean_absolute_error
 from scipy.stats import pearsonr
+import csv
 
 from utils.normalizer import TextNormalizer
 
@@ -17,14 +19,21 @@ class DataExample(object):
 
 class TaskSpecification(object):
 
-    def __init__(self, task_dir: str, task_type: str, num_labels: int, num_inputs: int):
+    def __init__(self, task_dir: str, task_type: str, num_labels: int, num_inputs: int, group_dir: str=""):
         self.task_dir: str = task_dir
+        self.group_dir: str = group_dir
         self.output_dir: str = task_dir
         self.task_type: str = task_type
         self.num_labels: int = num_labels
         self.num_inputs: int = num_inputs
         self.evaluation_metric: Callable = self.accuracy if task_type == "classification" else self.pearson
         self.no_dev_set = False
+
+    def task_path(self) -> str:
+        return self.task_dir if not self.group_dir else f"{self.group_dir}/{self.task_dir}"
+
+    def output_path(self) -> str:
+        return self.output_dir if not self.group_dir else f"{self.group_dir}/{self.output_dir}"
 
     def accuracy(self, y_true, y_pred):
         return accuracy_score(y_true, y_pred)
@@ -44,6 +53,19 @@ class TaskSpecification(object):
         logging.debug(res)
         return res[2]
 
+    def wmae(self, y_true, y_pred):
+        y_true_per_class = defaultdict(list)
+        y_pred_per_class = defaultdict(list)
+        for yt, yp in zip(y_true, y_pred):
+            y_true_per_class[yt].append(yt)
+            y_pred_per_class[yt].append(yp)
+        mae = []
+        for clazz in y_true_per_class.keys():
+            yt = y_true_per_class[clazz]
+            yp = y_pred_per_class[clazz]
+            mae.append(mean_absolute_error(yt, yp))
+        return sum(mae) / len(mae)
+
 
 class BaseTask(ABC):
 
@@ -51,12 +73,11 @@ class BaseTask(ABC):
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
         raise NotImplementedError
 
-    @abstractmethod
     def spec(self) -> TaskSpecification:
-        raise NotImplementedError
+        return self.__getattribute__("_spec")
 
     def get_split_path(self, data_path: str, split: str) -> str:
-        input_path = os.path.join(data_path, self.spec().task_dir, split + ".txt")
+        input_path = os.path.join(data_path, self.spec().task_path(), split + ".txt")
         if not os.path.exists(input_path):
             raise FileNotFoundError(input_path)
         return input_path
@@ -85,9 +106,6 @@ class WCCRSHotelsTask(BaseTask):
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
         return self.read_simple(data_path, split)
 
-    def spec(self) -> TaskSpecification:
-        return self._spec
-
 
 class WCCRSMedicineTask(BaseTask):
 
@@ -97,9 +115,6 @@ class WCCRSMedicineTask(BaseTask):
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
         return self.read_simple(data_path, split)
 
-    def spec(self) -> TaskSpecification:
-        return self._spec
-
 
 class EightTagsTask(BaseTask):
 
@@ -108,9 +123,6 @@ class EightTagsTask(BaseTask):
 
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
         return self.read_simple(data_path, split)
-
-    def spec(self) -> TaskSpecification:
-        return self._spec
 
 
 class SICKTask(BaseTask):
@@ -138,13 +150,9 @@ class SICKEntailmentTask(SICKTask):
     def __init__(self):
         self._spec = TaskSpecification("SICK", "classification", 3, 2)
         self._spec.output_dir = "SICK-E"
-        self._spec.evaluation_metric = self._spec.accuracy
 
     def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
         return DataExample([input1, input2], entailment)
-
-    def spec(self) -> TaskSpecification:
-        return self._spec
 
 
 class SICKRelatednessTask(SICKTask):
@@ -157,22 +165,15 @@ class SICKRelatednessTask(SICKTask):
         label = "%.5f" % (relatedness / 5.0,)
         return DataExample([input1, input2], label)
 
-    def spec(self) -> TaskSpecification:
-        return self._spec
-
 
 class CDSEntailmentTask(SICKTask):
 
     def __init__(self):
         self._spec = TaskSpecification("CDS", "classification", 3, 2)
         self._spec.output_dir = "CDS-E"
-        self._spec.evaluation_metric = self._spec.accuracy
 
     def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
         return DataExample([input1, input2], entailment)
-
-    def spec(self) -> TaskSpecification:
-        return self._spec
 
 
 class CDSRelatednessTask(SICKTask):
@@ -185,9 +186,6 @@ class CDSRelatednessTask(SICKTask):
         label = "%.5f" % (relatedness / 5.0,)
         return DataExample([input1, input2], label)
 
-    def spec(self) -> TaskSpecification:
-        return self._spec
-
 
 class CBDTask(BaseTask):
 
@@ -199,8 +197,8 @@ class CBDTask(BaseTask):
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
         split_name = "training" if split == "train" else split
         file_pattern = "{}_set_clean_only_{}.txt"
-        text_path = os.path.join(data_path, self._spec.task_dir, file_pattern.format(split_name, "text"))
-        tags_path = os.path.join(data_path, self._spec.task_dir, file_pattern.format(split_name, "tags"))
+        text_path = os.path.join(data_path, self._spec.task_path(), file_pattern.format(split_name, "text"))
+        tags_path = os.path.join(data_path, self._spec.task_path(), file_pattern.format(split_name, "tags"))
         normalizer = TextNormalizer(detokenize=False)
         with open(text_path, "r", encoding="utf-8") as text_file, open(tags_path, "r", encoding="utf-8") as tags_file:
             text_lines = text_file.readlines()
@@ -211,9 +209,6 @@ class CBDTask(BaseTask):
                 text = text.replace("@anonymized_account", "@ użytkownik")
                 label = tags_lines[idx].strip()
                 yield DataExample(text, label)
-
-    def spec(self) -> TaskSpecification:
-        return self._spec
 
 
 class PolEmoINTask(BaseTask):
@@ -235,9 +230,6 @@ class PolEmoINTask(BaseTask):
                 text = normalizer.process(text)
                 yield DataExample(text, label)
 
-    def spec(self) -> TaskSpecification:
-        return self._spec
-
 
 class PolEmoOUTTask(BaseTask):
 
@@ -258,5 +250,127 @@ class PolEmoOUTTask(BaseTask):
                 text = normalizer.process(text)
                 yield DataExample(text, label)
 
-    def spec(self) -> TaskSpecification:
-        return self._spec
+
+class KLEJTask(BaseTask):
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        input_path = os.path.join(data_path, self.spec().task_path(), split + ".tsv")
+        normalizer = self.normalizer()
+        with open(input_path, "r", encoding="utf-8") as input_file:
+            reader = csv.DictReader(input_file, dialect="excel-tab")
+            for row in reader:
+                yield self.create_example(row, normalizer)
+
+    def normalizer(self):
+        return TextNormalizer()
+
+    @abstractmethod
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        raise NotImplementedError
+
+
+class KLEJCBDTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("CBD", "classification", 2, 1, "KLEJ")
+        self._spec.no_dev_set = True
+        self._spec.evaluation_metric = self._spec.binary_f1
+
+    def normalizer(self) -> TextNormalizer:
+        return TextNormalizer(detokenize=False)
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text = normalizer.process(row["sentence"].strip())
+        text = text.replace("@anonymized_account", "@ użytkownik")
+        return DataExample(text, row["target"].strip())
+
+
+class KLEJDYKTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("DYK", "classification", 2, 2, "KLEJ")
+        self._spec.no_dev_set = True
+        self._spec.evaluation_metric = self._spec.binary_f1
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text1 = row["question"].strip()
+        text2 = row["answer"].strip()
+        return DataExample([text1, text2], row["target"].strip())
+
+
+class KLEJPSCTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("PSC", "classification", 2, 2, "KLEJ")
+        self._spec.no_dev_set = True
+        self._spec.evaluation_metric = self._spec.binary_f1
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text1 = row["extract_text"].strip()
+        text2 = row["summary_text"].strip()
+        return DataExample([text1, text2], row["label"].strip())
+
+
+class KLEJPolEmoINTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("POLEMO2.0-IN", "classification", 4, 1, "KLEJ")
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text= normalizer.process(row["sentence"].strip())
+        return DataExample(text, row["target"].strip())
+
+
+class KLEJPolEmoOUTTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("POLEMO2.0-OUT", "classification", 4, 1, "KLEJ")
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text= normalizer.process(row["sentence"].strip())
+        return DataExample(text, row["target"].strip())
+
+
+class KLEJCDSEntailmentTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("CDSC-E", "classification", 3, 2, "KLEJ")
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text1 = normalizer.process(row["sentence_A"].strip())
+        text2 = normalizer.process(row["sentence_B"].strip())
+        return DataExample([text1, text2], row["entailment_judgment"].strip())
+
+
+class KLEJCDSRelatednessTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("CDSC-R", "regression", 1, 2, "KLEJ")
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text1 = normalizer.process(row["sentence_A"].strip())
+        text2 = normalizer.process(row["sentence_B"].strip())
+        score = float(row["relatedness_score"])
+        return DataExample([text1, text2], "%.5f" % (score / 5.0,))
+
+
+class KLEJNKJPTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("NKJP-NER", "classification", 6, 1, "KLEJ")
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text = normalizer.process(row["sentence"].strip())
+        return DataExample(text, row["target"].strip())
+
+
+class KLEJECRTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("ECR", "regression", 1, 1, "KLEJ")
+        self._spec.evaluation_metric = self._spec.wmae
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text = row["text"].strip()
+        score = float(row["rating"]) - 1.0
+        return DataExample(text, "%.5f" % (score / 5.0,))
