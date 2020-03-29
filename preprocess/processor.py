@@ -46,7 +46,9 @@ class TaskProcessor(object):
         for record in self.task.read(data_path, split):
             label = record.label
             resampling_value = self.resample.get(label)
-            if resampling_value < 1:
+            if resampling_value is None:
+                yield record
+            elif resampling_value < 1:
                 if random.random() <= resampling_value:
                     yield record
             elif resampling_value > 1:

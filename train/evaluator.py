@@ -34,6 +34,6 @@ class TaskEvaluator(object):
             prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits)
             y_true.append(get_true(record))
             y_pred.append(get_pred(prediction))
-        score = self.task.spec().evaluation_metric(y_true, y_pred)
-        logging.info("score = %.6f", score)
-        return score
+        scores = self.task.spec().evaluation_metric(y_true, y_pred)
+        logging.info("scores = %s", scores.__repr__())
+        return scores

@@ -3,6 +3,9 @@ import logging
 import fire
 from fairseq import hub_utils
 from fairseq.models.roberta import RobertaModel, RobertaHubInterface
+import fcntl
+from datetime import datetime
+import json
 
 from preprocess.processor import TaskProcessor
 from train.evaluator import TaskEvaluator
@@ -68,15 +71,25 @@ class TaskRunner(object):
         )
         roberta = RobertaHubInterface(loaded['args'], loaded['task'], loaded['models'][0])
         evaluator = TaskEvaluator(self.task, roberta, "data")
-        evaluator.evaluate()
+        return evaluator.evaluate()
 
     def _count_train(self):
         return sum(1 for _ in self.task.read(self.input_dir, "train"))
+
+    def log_score(self, task_name: str, params: Dict, scores: Dict):
+        now = datetime.now().strftime("%d/%m/%Y,%H:%M:%S")
+        res = {"task": task_name, "timestamp": now, "scores": scores, "params": params}
+        with open("runlog.txt", "a", encoding="utf-8") as output_file:
+            fcntl.flock(output_file, fcntl.LOCK_EX)
+            json.dump(res, output_file)
+            output_file.write("\n")
+            fcntl.flock(output_file, fcntl.LOCK_UN)
 
 
 def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed", model_dir: str="models",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
               evaluation_only: bool=False, resample: str=None):
+    params = locals()
     if tasks is None:
         task_names = [key for key in TASKS.keys()]
         task_classes = [val for val in TASKS.values()]
@@ -85,13 +98,15 @@ def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed"
         task_classes = [TASKS.get(task_name) for task_name in task_names]
     logging.info("Running training and evaluation for tasks %s", task_names.__repr__())
     for idx, task_class in enumerate(task_classes):
-        if task_class is None: raise Exception(f"Unknown task {task_names[idx]}")
+        task_name = task_names[idx]
+        if task_class is None: raise Exception(f"Unknown task {task_name}")
         task = task_class()
         runner: TaskRunner = TaskRunner(task, input_dir, output_dir, model_dir)
         if not evaluation_only:
             runner.prepare_task(resample)
             runner.train_task(arch, train_epochs, fp16, max_sentences, update_freq)
-        runner.evaluate_task()
+        score = runner.evaluate_task()
+        runner.log_score(task_name, params, score)
 
 
 if __name__ == '__main__':

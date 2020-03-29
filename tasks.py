@@ -36,22 +36,21 @@ class TaskSpecification(object):
         return self.output_dir if not self.group_dir else f"{self.group_dir}/{self.output_dir}"
 
     def accuracy(self, y_true, y_pred):
-        return accuracy_score(y_true, y_pred)
+        return {"accuracy": accuracy_score(y_true, y_pred)}
 
     def pearson(self, y_true, y_pred):
-        return pearsonr(y_true, y_pred)[0]
+        return {"pearson": pearsonr(y_true, y_pred)[0]}
 
     def f1(self, y_true, y_pred):
-        res = precision_recall_fscore_support(y_true, y_pred, average="weighted")
-        logging.debug(res)
-        return res[2]
+        res = precision_recall_fscore_support(y_true, y_pred, average="micro")
+        return {"precision": res[0], "recall": res[1], "micro-f1": res[2]}
 
     def binary_f1(self, y_true, y_pred):
         y_true = [int(val) for val in y_true]
         y_pred = [int(val) for val in y_pred]
         res = precision_recall_fscore_support(y_true, y_pred, average="binary")
         logging.debug(res)
-        return res[2]
+        return {"precision": res[0], "recall": res[1], "binary-f1": res[2]}
 
     def wmae(self, y_true, y_pred):
         y_true_per_class = defaultdict(list)
@@ -64,7 +63,8 @@ class TaskSpecification(object):
             yt = y_true_per_class[clazz]
             yp = y_pred_per_class[clazz]
             mae.append(mean_absolute_error(yt, yp))
-        return sum(mae) / len(mae)
+        mae_avg = sum(mae) / len(mae)
+        return {"wmae": mae_avg, "1-wmae": 1 - mae_avg}
 
 
 class BaseTask(ABC):
