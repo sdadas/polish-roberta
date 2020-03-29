@@ -45,8 +45,8 @@ class TaskRunner(object):
         self.model_dir: str = model_dir
         self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
 
-    def prepare_task(self):
-        processor = TaskProcessor(self.task, self.input_dir, self.output_dir, self.model_dir)
+    def prepare_task(self, resample: str):
+        processor = TaskProcessor(self.task, self.input_dir, self.output_dir, self.model_dir, resample)
         processor.prepare()
 
     def train_task(self, arch: str, train_epochs: int, fp16: bool, max_sentences: int, update_freq: int):
@@ -76,7 +76,7 @@ class TaskRunner(object):
 
 def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed", model_dir: str="models",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
-              evaluation_only: bool=False):
+              evaluation_only: bool=False, resample: str=None):
     if tasks is None:
         task_names = [key for key in TASKS.keys()]
         task_classes = [val for val in TASKS.values()]
@@ -89,7 +89,7 @@ def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed"
         task = task_class()
         runner: TaskRunner = TaskRunner(task, input_dir, output_dir, model_dir)
         if not evaluation_only:
-            runner.prepare_task()
+            runner.prepare_task(resample)
             runner.train_task(arch, train_epochs, fp16, max_sentences, update_freq)
         runner.evaluate_task()
 

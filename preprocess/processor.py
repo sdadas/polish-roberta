@@ -3,7 +3,8 @@ import multiprocessing
 import os
 import shutil
 import subprocess
-from typing import TextIO, List
+from typing import TextIO, List, Optional, Dict
+import random
 
 from preprocess.spm_encode import spm_encode
 from tasks import BaseTask
@@ -11,14 +12,27 @@ from tasks import BaseTask
 
 class TaskProcessor(object):
 
-    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str):
+    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str):
         self.task: BaseTask = task
         self.data_path: str = data_path
         self.model_path = model_path
         self.output_path = output_path
         self.task_output_path = os.path.join(self.output_path, task.spec().output_path())
+        self.resample = self._parse_resample_string(resample)
         if not os.path.exists(self.task_output_path):
             os.makedirs(self.task_output_path, exist_ok=True)
+
+    def _parse_resample_string(self, resample) -> Optional[Dict]:
+        if not resample: return None
+        values = [val.strip() for val in resample.split(",")]
+        res = {}
+        for value in values:
+            if not ":" in value: continue
+            keyval = value.split(":", maxsplit=2)
+            key = keyval[0].strip()
+            val = float(keyval[1].strip())
+            res[key] = val
+        return res
 
     def prepare(self):
         self._prepare_split("train")
@@ -27,12 +41,35 @@ class TaskProcessor(object):
         self._spm_encode()
         self._fairseq_preprocess()
 
+    def _resampling_wrapper(self, data_path, split):
+        resampled = []
+        for record in self.task.read(data_path, split):
+            label = record.label
+            resampling_value = self.resample.get(label)
+            if resampling_value < 1:
+                if random.random() <= resampling_value:
+                    yield record
+            elif resampling_value > 1:
+                yield record
+                decimal_part = resampling_value % 1
+                whole_part = int(resampling_value)
+                for idx in range(whole_part):
+                    if idx == 0: yield record
+                    else: resampled.append(record)
+                if random.random() <= decimal_part:
+                    resampled.append(record)
+            else:
+                yield record
+        for record in resampled:
+            yield record
+
     def _prepare_split(self, split: str):
         if split == "dev" and self.task.spec().no_dev_set: return
         num_inputs: int = self.task.spec().num_inputs
         num_outputs: int = num_inputs + 1
         outputs: List[TextIO] = self._open_outputs(split, num_inputs)
-        for record in self.task.read(self.data_path, split):
+        reader = self._resampling_wrapper if split == "train" and self.resample is not None else self.task.read
+        for record in reader(self.data_path, split):
             rec_out = [record.label]
             rec_out.extend(record.inputs)
             assert len(rec_out) == num_outputs, rec_out
