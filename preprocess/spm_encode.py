@@ -10,18 +10,7 @@ def spm_initializer(spm_path: str):
     spm = SentencePieceProcessor()
     spm.load(spm_path)
     global vocab
-    vocab = load_vocab(spm_path)
-
-def load_vocab(spm_path: str) -> Dict[int, str]:
-    vocab_path = spm_path.replace(".model", ".vocab")
-    res: Dict[int, str] = {}
-    with open(vocab_path, "r", encoding="utf-8") as input_file:
-        idx = 0
-        for line in input_file:
-            word = line.strip().split()[0]
-            res[idx] = word
-            idx += 1
-    return res
+    vocab = {index:spm.id_to_piece(index) for index in range(spm.GetPieceSize())}
 
 def spm_process(doc: List[str], max_length: int=None):
     return [" ".join([vocab.get(val) for val in encode_tokens(sent, max_length)]) for sent in doc]

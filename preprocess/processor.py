@@ -96,7 +96,7 @@ class TaskProcessor(object):
 
     def _spm_encode_file(self, file_path: str):
         output_path = file_path.replace(".raw.input", ".input")
-        spm_model = os.path.join(self.model_path, "sentencepiece.model")
+        spm_model = os.path.join(self.model_path, "sentencepiece.bpe.model")
         spm_encode(file_path, output_path, spm_model, threads=1, encode_ids=False, max_length=510)
 
     def _fairseq_preprocess(self):

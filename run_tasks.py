@@ -1,5 +1,3 @@
-import logging
-
 import fire
 from fairseq import hub_utils
 from fairseq.models.roberta import RobertaModel, RobertaHubInterface
@@ -46,6 +44,7 @@ class TaskRunner(object):
         self.input_dir: str = input_dir
         self.output_dir: str = output_dir
         self.model_dir: str = model_dir
+        self.model_name: str = os.path.basename(model_dir)
         self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
 
     def prepare_task(self, resample: str):
@@ -58,14 +57,14 @@ class TaskRunner(object):
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
     def evaluate_task(self):
-        checkpoints_output_dir = os.path.join("checkpoints", self.task.spec().output_path())
+        checkpoints_output_dir = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
         checkpoint_file = "checkpoint_last.pt" if self.task.spec().no_dev_set else "checkpoint_best.pt"
         loaded = hub_utils.from_pretrained(
             model_name_or_path=checkpoints_output_dir,
             checkpoint_file=checkpoint_file,
             data_name_or_path=self.task_output_dir,
             bpe="sentencepiece",
-            sentencepiece_vocab=os.path.join("models", "sentencepiece.model"),
+            sentencepiece_vocab=os.path.join(self.model_dir, "sentencepiece.bpe.model"),
             load_checkpoint_heads=True,
             archive_map=RobertaModel.hub_models()
         )
@@ -89,6 +88,7 @@ class TaskRunner(object):
 def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed", model_dir: str="models",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
               evaluation_only: bool=False, resample: str=None):
+    assert arch in ("roberta_base", "roberta_large")
     params = locals()
     if tasks is None:
         task_names = [key for key in TASKS.keys()]
