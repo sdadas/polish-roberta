@@ -85,7 +85,7 @@ class TaskRunner(object):
             fcntl.flock(output_file, fcntl.LOCK_UN)
 
 
-def run_tasks(arch: str, input_dir: str="data", output_dir: str="data_processed", model_dir: str="models",
+def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
               evaluation_only: bool=False, resample: str=None):
     assert arch in ("roberta_base", "roberta_large")

@@ -8,7 +8,7 @@ from tasks import BaseTask
 class TaskTrainer(object):
 
     def __init__(self, task: BaseTask, data_path: str, model_path: str, train_size: int,
-                 checkpoint: str="checkpoint_best.pt", arch: str="roberta_large", fp16: bool=False):
+                 checkpoint: str="model.pt", arch: str="roberta_large", fp16: bool=False):
         self.task: BaseTask = task
         self.train_size: int = train_size
         self.data_path: str = data_path
@@ -27,10 +27,12 @@ class TaskTrainer(object):
         batch_size: int = max_sentences * update_freq
         total_updates: int = int((self.train_size * max_epoch) / batch_size)
         warmup_updates: int = int(total_updates / 16.67)
+        restore_file = os.path.join(self.model_path, self.checkpoint)
+        assert os.path.exists(restore_file)
         cmd = [
             "fairseq-train",
             self.task_data_path,
-            "--restore-file", os.path.join(self.model_path, self.checkpoint),
+            "--restore-file", restore_file,
             "--max-positions", "512",
             "--max-sentences", str(max_sentences),
             "--update-freq", str(update_freq),
