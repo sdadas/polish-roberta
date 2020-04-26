@@ -47,7 +47,7 @@ class TaskEvaluator(object):
     def save_results(self, y_pred: List[any]):
         output_path = os.path.join(self.output_dir, f"{self.task_id}.txt")
         sample_value = y_pred[0]
-        output_func = lambda v: "%.5f" % (v,) if isinstance(sample_value, float) else str
+        output_func = (lambda v: "%.5f" % (v,)) if isinstance(sample_value, float) else str
         if hasattr(self.task, "format_output"):
             output_func = self.task.format_output
         with open(output_path, "w", encoding="utf-8") as output_file:
