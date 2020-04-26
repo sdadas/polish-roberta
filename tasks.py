@@ -53,6 +53,9 @@ class TaskSpecification(object):
         return {"precision": res[0], "recall": res[1], "binary-f1": res[2]}
 
     def wmae(self, y_true, y_pred):
+        if(isinstance(y_true[0], str)):
+            y_true = [float(val) for val in y_true]
+            y_pred = [float(val) for val in y_pred]
         y_true_per_class = defaultdict(list)
         y_pred_per_class = defaultdict(list)
         for yt, yp in zip(y_true, y_pred):
@@ -353,6 +356,9 @@ class KLEJCDSRelatednessTask(KLEJTask):
         score = float(row["relatedness_score"])
         return DataExample([text1, text2], "%.5f" % (score / 5.0,))
 
+    def format_output(self, value: float):
+        return "%.2f" % (value * 5,)
+
 
 class KLEJNKJPTask(KLEJTask):
 
@@ -364,7 +370,7 @@ class KLEJNKJPTask(KLEJTask):
         return DataExample(text, row["target"].strip())
 
 
-class KLEJECRTask(KLEJTask):
+class KLEJECRRegressionTask(KLEJTask):
 
     def __init__(self):
         self._spec = TaskSpecification("ECR", "regression", 1, 1, "KLEJ")
@@ -373,4 +379,18 @@ class KLEJECRTask(KLEJTask):
     def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
         text = row["text"].strip()
         score = float(row["rating"]) - 1.0
-        return DataExample(text, "%.5f" % (score / 5.0,))
+        return DataExample(text, "%.5f" % (score / 4.0,))
+
+    def format_output(self, value: float):
+        return "%.2f" % (1 + value * 4,)
+
+
+class KLEJECRClassificationTask(KLEJTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("ECR", "classification", 5, 1, "KLEJ")
+        self._spec.evaluation_metric = self._spec.wmae
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+        text = row["text"].strip()
+        return DataExample(text, row["rating"].strip())

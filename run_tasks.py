@@ -1,3 +1,6 @@
+import string
+from random import choice
+
 import fire
 from fairseq import hub_utils
 from fairseq.models.roberta import RobertaModel, RobertaHubInterface
@@ -33,14 +36,15 @@ TASKS = {
     "KLEJ-POLEMO-OUT": KLEJPolEmoOUTTask,
     "KLEJ-DYK":        KLEJDYKTask,
     "KLEJ-PSC":        KLEJPSCTask,
-    "KLEJ-ECR":        KLEJECRTask
+    "KLEJ-ECR":        KLEJECRRegressionTask
 }
 
 
 class TaskRunner(object):
 
-    def __init__(self, task: BaseTask, input_dir: str, output_dir: str, model_dir: str):
+    def __init__(self, task: BaseTask, task_id: str, input_dir: str, output_dir: str, model_dir: str):
         self.task: BaseTask = task
+        self.task_id: str = task_id
         self.input_dir: str = input_dir
         self.output_dir: str = output_dir
         self.model_dir: str = model_dir
@@ -69,15 +73,15 @@ class TaskRunner(object):
             archive_map=RobertaModel.hub_models()
         )
         roberta = RobertaHubInterface(loaded['args'], loaded['task'], loaded['models'][0])
-        evaluator = TaskEvaluator(self.task, roberta, "data")
+        evaluator = TaskEvaluator(self.task, self.task_id, roberta, self.input_dir, checkpoints_output_dir)
         return evaluator.evaluate()
 
     def _count_train(self):
         return sum(1 for _ in self.task.read(self.input_dir, "train"))
 
-    def log_score(self, task_name: str, params: Dict, scores: Dict):
+    def log_score(self, task_name: str, task_id: str, params: Dict, scores: Dict):
         now = datetime.now().strftime("%d/%m/%Y,%H:%M:%S")
-        res = {"task": task_name, "timestamp": now, "scores": scores, "params": params}
+        res = {"id": task_id, "task": task_name, "timestamp": now, "scores": scores, "params": params}
         with open("runlog.txt", "a", encoding="utf-8") as output_file:
             fcntl.flock(output_file, fcntl.LOCK_EX)
             json.dump(res, output_file)
@@ -100,13 +104,15 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
     for idx, task_class in enumerate(task_classes):
         task_name = task_names[idx]
         if task_class is None: raise Exception(f"Unknown task {task_name}")
+        rand = ''.join(choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(8))
+        task_id = task_name.lower() + "_" + rand
         task = task_class()
-        runner: TaskRunner = TaskRunner(task, input_dir, output_dir, model_dir)
+        runner: TaskRunner = TaskRunner(task, task_id, input_dir, output_dir, model_dir)
         if not evaluation_only:
             runner.prepare_task(resample)
             runner.train_task(arch, train_epochs, fp16, max_sentences, update_freq)
         score = runner.evaluate_task()
-        runner.log_score(task_name, params, score)
+        runner.log_score(task_name, task_id, params, score)
 
 
 if __name__ == '__main__':

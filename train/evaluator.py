@@ -1,14 +1,19 @@
 import logging
+import os
+from typing import List
+
 from fairseq.models.roberta import RobertaHubInterface
 from tasks import BaseTask
 
 
 class TaskEvaluator(object):
 
-    def __init__(self, task: BaseTask, model: RobertaHubInterface, data_path: str):
+    def __init__(self, task: BaseTask, task_id: str, model: RobertaHubInterface, data_path: str, output_dir: str):
         self.task: BaseTask = task
+        self.task_id: str = task_id
         self.model: RobertaHubInterface = model
         self.data_path: str = data_path
+        self.output_dir = output_dir
         self.model.cuda()
         self.model.eval()
 
@@ -36,4 +41,16 @@ class TaskEvaluator(object):
             y_pred.append(get_pred(prediction))
         scores = self.task.spec().evaluation_metric(y_true, y_pred)
         logging.info("scores = %s", scores.__repr__())
+        self.save_results(y_pred)
         return scores
+
+    def save_results(self, y_pred: List[any]):
+        output_path = os.path.join(self.output_dir, f"{self.task_id}.txt")
+        sample_value = y_pred[0]
+        output_func = lambda v: "%.5f" % (v,) if isinstance(sample_value, float) else str
+        if hasattr(self.task, "format_output"):
+            output_func = self.task.format_output
+        with open(output_path, "w", encoding="utf-8") as output_file:
+            for value in y_pred:
+                output_file.write(output_func(value))
+                output_file.write("\n")
