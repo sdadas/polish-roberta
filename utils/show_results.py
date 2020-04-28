@@ -49,6 +49,11 @@ def print_table(results: Dict[str, List]):
         means.append("%.2f" % ((sum(scores) / len(scores)) * 100,))
     table.append(["-----" for _ in header])
     table.append(means)
+    header.insert(0, "MEAN")
+    for row in table[1:]:
+        if row[0] == "-----": continue
+        row_mean = sum(float(val) for val in row if len(val) > 0) / len([row for val in row if len(val) > 0])
+        row.insert(0, "%.2f" % (row_mean,))
     printer: TablePrinter = TablePrinter()
     for idx in range(0, len(header)): printer.column(idx, align=TableColumn.ALIGN_CENTER, width=15)
     printer.print(table)
