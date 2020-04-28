@@ -24,13 +24,21 @@ class TaskTrainer(object):
     def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10, seed: int=None):
         self._run_fairseq_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
 
+    def _remove_previous_checkpoints(self, checkpoint_path: str):
+        checkpoint_last = os.path.join(checkpoint_path, "checkpoint_last.pt")
+        if os.path.exists(checkpoint_last): os.remove(checkpoint_last)
+        checkpoint_best = os.path.join(checkpoint_path, "checkpoint_best.pt")
+        if os.path.exists(checkpoint_best): os.remove(checkpoint_best)
+
     def _run_fairseq_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
-        if seed is None: seed = random.randint(-1_000_000, 1_000_000)
+        if seed is None: seed = random.randint(0, 1_000_000)
         batch_size: int = max_sentences * update_freq
         total_updates: int = int((self.train_size * max_epoch) / batch_size)
         warmup_updates: int = int(total_updates / 16.67)
         restore_file = os.path.join(self.model_path, self.checkpoint)
         assert os.path.exists(restore_file)
+        checkpoint_path = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
+        self._remove_previous_checkpoints(checkpoint_path)
         cmd = [
             "fairseq-train",
             self.task_data_path,
@@ -65,7 +73,7 @@ class TaskTrainer(object):
             "--find-unused-parameters",
             "--log-format", "simple",
             "--log-interval", "5",
-            "--save-dir", os.path.join("checkpoints", self.model_name, self.task.spec().output_path()),
+            "--save-dir", checkpoint_path,
             "--no-epoch-checkpoints"
         ]
         if self.task.spec().no_dev_set:
