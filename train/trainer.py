@@ -1,6 +1,7 @@
 import logging
 import os
 import subprocess
+import random
 
 from tasks import BaseTask
 
@@ -20,10 +21,11 @@ class TaskTrainer(object):
         self.learning_rate = "1e-5"
         self.fp16 = fp16
 
-    def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10):
-        self._run_fairseq_train(max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
+    def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10, seed: int=None):
+        self._run_fairseq_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
 
-    def _run_fairseq_train(self, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
+    def _run_fairseq_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
+        if seed is None: seed = random.randint(-1_000_000, 1_000_000)
         batch_size: int = max_sentences * update_freq
         total_updates: int = int((self.train_size * max_epoch) / batch_size)
         warmup_updates: int = int(total_updates / 16.67)
@@ -33,6 +35,7 @@ class TaskTrainer(object):
             "fairseq-train",
             self.task_data_path,
             "--restore-file", restore_file,
+            "--seed", str(seed),
             "--max-positions", "512",
             "--max-sentences", str(max_sentences),
             "--update-freq", str(update_freq),

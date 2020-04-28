@@ -42,12 +42,13 @@ TASKS = {
 
 class TaskRunner(object):
 
-    def __init__(self, task: BaseTask, task_id: str, input_dir: str, output_dir: str, model_dir: str):
+    def __init__(self, task: BaseTask, task_id: str, input_dir: str, output_dir: str, model_dir: str, seed: int):
         self.task: BaseTask = task
         self.task_id: str = task_id
         self.input_dir: str = input_dir
         self.output_dir: str = output_dir
         self.model_dir: str = model_dir
+        self.seed = seed
         self.model_name: str = os.path.basename(model_dir)
         self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
 
@@ -91,7 +92,7 @@ class TaskRunner(object):
 
 def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
-              evaluation_only: bool=False, resample: str=None):
+              evaluation_only: bool=False, resample: str=None, seed: int=None):
     assert arch in ("roberta_base", "roberta_large")
     params = locals()
     if tasks is None:
@@ -107,7 +108,7 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
         rand = ''.join(choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(8))
         task_id = task_name.lower() + "_" + rand
         task = task_class()
-        runner: TaskRunner = TaskRunner(task, task_id, input_dir, output_dir, model_dir)
+        runner: TaskRunner = TaskRunner(task, task_id, input_dir, output_dir, model_dir, seed)
         if not evaluation_only:
             runner.prepare_task(resample)
             runner.train_task(arch, train_epochs, fp16, max_sentences, update_freq)
