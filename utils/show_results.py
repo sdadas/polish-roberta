@@ -47,7 +47,7 @@ def print_table(results: Dict[str, List]):
     for key in header:
         scores = results.get(key)
         means.append("%.2f" % ((sum(scores) / len(scores)) * 100,))
-    table.append(["-----" for _ in header])
+    table.append(["-----" for _ in range(len(header) + 1)])
     table.append(means)
     header.insert(0, "MEAN")
     for row in table[1:]:
