@@ -1,6 +1,6 @@
 import logging
 import os
-from typing import List
+from typing import List, Callable
 
 from fairseq.models.roberta import RobertaHubInterface
 from tasks import BaseTask
@@ -32,6 +32,10 @@ class TaskEvaluator(object):
             get_pred = lambda v: v.item()
             get_true = lambda v: float(v.label)
             logits = True
+        if hasattr(self.task, "postprocess_prediction"):
+            get_pred_original = get_pred
+            postprocess: Callable = self.task.postprocess_prediction
+            get_pred = lambda v: postprocess(get_pred_original(v))
         for record in self.task.read(self.data_path, "test"):
             tokens = self.model.encode(*record.inputs)
             if tokens.size()[0] > 512:

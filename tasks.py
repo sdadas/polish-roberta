@@ -168,6 +168,12 @@ class SICKRelatednessTask(SICKTask):
         label = "%.5f" % (relatedness / 5.0,)
         return DataExample([input1, input2], label)
 
+    def format_output(self, value: float):
+        return "%.2f" % (value * 5,)
+
+    def postprocess_prediction(self, value: float):
+        return min((max(value, 0.0)), 1.0)
+
 
 class CDSEntailmentTask(SICKTask):
 
@@ -188,6 +194,12 @@ class CDSRelatednessTask(SICKTask):
     def create_example(self, input1: str, input2: str, relatedness: float, entailment: str):
         label = "%.5f" % (relatedness / 5.0,)
         return DataExample([input1, input2], label)
+
+    def format_output(self, value: float):
+        return "%.2f" % (value * 5,)
+
+    def postprocess_prediction(self, value: float):
+        return min((max(value, 0.0)), 1.0)
 
 
 class CBDTask(BaseTask):
@@ -359,6 +371,9 @@ class KLEJCDSRelatednessTask(KLEJTask):
     def format_output(self, value: float):
         return "%.2f" % (value * 5,)
 
+    def postprocess_prediction(self, value: float):
+        return min((max(value, 0)), 1)
+
 
 class KLEJNKJPTask(KLEJTask):
 
@@ -383,6 +398,11 @@ class KLEJECRRegressionTask(KLEJTask):
 
     def format_output(self, value: float):
         return "%.2f" % (1 + value * 4,)
+
+    def postprocess_prediction(self, value: float):
+        score = min(max(1 + value * 4, 0), 5)
+        score = round(score)
+        return (score - 1.0) / 4.0
 
 
 class KLEJECRClassificationTask(KLEJTask):
