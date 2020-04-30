@@ -270,17 +270,21 @@ class KLEJTask(BaseTask):
 
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
         input_path = os.path.join(data_path, self.spec().task_path(), split + ".tsv")
+        has_target = True
+        if split == "test" and not os.path.exists(input_path):
+            input_path = os.path.join(data_path, self.spec().task_path(), split + "_features.tsv")
+            has_target = False
         normalizer = self.normalizer()
         with open(input_path, "r", encoding="utf-8") as input_file:
             reader = csv.DictReader(input_file, dialect="excel-tab")
             for row in reader:
-                yield self.create_example(row, normalizer)
+                yield self.create_example(row, normalizer, has_target)
 
     def normalizer(self):
         return TextNormalizer()
 
     @abstractmethod
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         raise NotImplementedError
 
 
@@ -294,10 +298,10 @@ class KLEJCBDTask(KLEJTask):
     def normalizer(self) -> TextNormalizer:
         return TextNormalizer(detokenize=False)
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text = normalizer.process(row["sentence"].strip())
         text = text.replace("@anonymized_account", "@ użytkownik")
-        return DataExample(text, row["target"].strip())
+        return DataExample(text, row["target"].strip() if has_target else None)
 
 
 class KLEJDYKTask(KLEJTask):
@@ -307,10 +311,13 @@ class KLEJDYKTask(KLEJTask):
         self._spec.no_dev_set = True
         self._spec.evaluation_metric = self._spec.binary_f1
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def normalizer(self) -> TextNormalizer:
+        return TextNormalizer(detokenize=False)
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text1 = row["question"].strip()
         text2 = row["answer"].strip()
-        return DataExample([text1, text2], row["target"].strip())
+        return DataExample([text1, text2], row["target"].strip() if has_target else None)
 
 
 class KLEJPSCTask(KLEJTask):
@@ -320,10 +327,13 @@ class KLEJPSCTask(KLEJTask):
         self._spec.no_dev_set = True
         self._spec.evaluation_metric = self._spec.binary_f1
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def normalizer(self) -> TextNormalizer:
+        return TextNormalizer(detokenize=False)
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text1 = row["extract_text"].strip()
         text2 = row["summary_text"].strip()
-        return DataExample([text1, text2], row["label"].strip())
+        return DataExample([text1, text2], row["label"].strip() if has_target else None)
 
 
 class KLEJPolEmoINTask(KLEJTask):
@@ -331,9 +341,9 @@ class KLEJPolEmoINTask(KLEJTask):
     def __init__(self):
         self._spec = TaskSpecification("POLEMO2.0-IN", "classification", 4, 1, "KLEJ")
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text= normalizer.process(row["sentence"].strip())
-        return DataExample(text, row["target"].strip())
+        return DataExample(text, row["target"].strip() if has_target else None)
 
 
 class KLEJPolEmoOUTTask(KLEJTask):
@@ -341,9 +351,9 @@ class KLEJPolEmoOUTTask(KLEJTask):
     def __init__(self):
         self._spec = TaskSpecification("POLEMO2.0-OUT", "classification", 4, 1, "KLEJ")
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text= normalizer.process(row["sentence"].strip())
-        return DataExample(text, row["target"].strip())
+        return DataExample(text, row["target"].strip() if has_target else None)
 
 
 class KLEJCDSEntailmentTask(KLEJTask):
@@ -351,10 +361,10 @@ class KLEJCDSEntailmentTask(KLEJTask):
     def __init__(self):
         self._spec = TaskSpecification("CDSC-E", "classification", 3, 2, "KLEJ")
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text1 = normalizer.process(row["sentence_A"].strip())
         text2 = normalizer.process(row["sentence_B"].strip())
-        return DataExample([text1, text2], row["entailment_judgment"].strip())
+        return DataExample([text1, text2], row["entailment_judgment"].strip() if has_target else None)
 
 
 class KLEJCDSRelatednessTask(KLEJTask):
@@ -362,11 +372,14 @@ class KLEJCDSRelatednessTask(KLEJTask):
     def __init__(self):
         self._spec = TaskSpecification("CDSC-R", "regression", 1, 2, "KLEJ")
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text1 = normalizer.process(row["sentence_A"].strip())
         text2 = normalizer.process(row["sentence_B"].strip())
-        score = float(row["relatedness_score"])
-        return DataExample([text1, text2], "%.5f" % (score / 5.0,))
+        if has_target:
+            score = float(row["relatedness_score"])
+            score = "%.5f" % (score / 5.0,)
+        else: score = None
+        return DataExample([text1, text2], score)
 
     def format_output(self, value: float):
         return "%.2f" % (value * 5,)
@@ -380,9 +393,9 @@ class KLEJNKJPTask(KLEJTask):
     def __init__(self):
         self._spec = TaskSpecification("NKJP-NER", "classification", 6, 1, "KLEJ")
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text = normalizer.process(row["sentence"].strip())
-        return DataExample(text, row["target"].strip())
+        return DataExample(text, row["target"].strip() if has_target else None)
 
 
 class KLEJECRRegressionTask(KLEJTask):
@@ -391,10 +404,16 @@ class KLEJECRRegressionTask(KLEJTask):
         self._spec = TaskSpecification("ECR", "regression", 1, 1, "KLEJ")
         self._spec.evaluation_metric = self._spec.wmae
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text = row["text"].strip()
-        score = float(row["rating"]) - 1.0
-        return DataExample(text, "%.5f" % (score / 4.0,))
+        if has_target:
+            score = float(row["rating"]) - 1.0
+            score = "%.5f" % (score / 4.0,)
+        else: score = None
+        return DataExample(text, score)
+
+    def normalizer(self) -> TextNormalizer:
+        return TextNormalizer(detokenize=False)
 
     def format_output(self, value: float):
         return "%.2f" % (1 + value * 4,)
@@ -411,6 +430,9 @@ class KLEJECRClassificationTask(KLEJTask):
         self._spec = TaskSpecification("ECR", "classification", 5, 1, "KLEJ")
         self._spec.evaluation_metric = self._spec.wmae
 
-    def create_example(self, row: Dict, normalizer: TextNormalizer) -> DataExample:
+    def normalizer(self) -> TextNormalizer:
+        return TextNormalizer(detokenize=False)
+
+    def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text = row["text"].strip()
-        return DataExample(text, row["rating"].strip())
+        return DataExample(text, row["rating"].strip() if has_target else None)

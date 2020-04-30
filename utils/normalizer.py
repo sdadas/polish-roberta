@@ -108,6 +108,7 @@ class TextNormalizer(object):
         if self._replace_emoji:
             text = "".join((emoji.get(c, c) for c in text))
         if self._detokenize:
+            text = text.replace(" em ", "em ").replace(" śmy ", "śmy ").replace(" m ", "m ")
             tokens: List[str] = text.split()
             text = self._moses.detokenize(tokens)
         return text

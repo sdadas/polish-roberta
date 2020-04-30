@@ -76,6 +76,8 @@ class TaskProcessor(object):
             rec_out.extend(record.inputs)
             assert len(rec_out) == num_outputs, rec_out
             for idx in range(num_outputs):
+                if rec_out[idx] is None and idx == 0 and split == "test":
+                    continue # skip missing test labels
                 outputs[idx].write(rec_out[idx])
                 outputs[idx].write("\n")
         for output in outputs:

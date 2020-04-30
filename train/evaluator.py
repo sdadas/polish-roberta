@@ -24,7 +24,7 @@ class TaskEvaluator(object):
         y_true = []
         y_pred = []
         logits = False
-        logging.info("evaluating task %s", self.task.spec().output_dir)
+        logging.info("generating predictions for task %s", self.task.spec().output_dir)
         if self.task.spec().task_type == "classification":
             get_pred = lambda v: self._get_label(v.argmax().item())
             get_true = lambda v: v.label
@@ -41,10 +41,14 @@ class TaskEvaluator(object):
             if tokens.size()[0] > 512:
                 tokens = tokens[0:512]
             prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits)
-            y_true.append(get_true(record))
+            y_true.append(get_true(record) if record.label is not None else None)
             y_pred.append(get_pred(prediction))
-        scores = self.task.spec().evaluation_metric(y_true, y_pred)
-        logging.info("scores = %s", scores.__repr__())
+        if y_true[0] is None:
+            logging.info("No test labels available, skipping evaluation for task %s", self.task.spec().output_dir)
+            scores = {}
+        else:
+            scores = self.task.spec().evaluation_metric(y_true, y_pred)
+            logging.info("scores = %s", scores.__repr__())
         self.save_results(y_pred)
         return scores
 
