@@ -9,30 +9,35 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 <th>Update steps</th>
 <th>Corpus size</th>
 <th>Final perplexity*</th>
-<th>Download</th>
+<th>Fairseq</th>
+<th>Transformers</th>
 </thead>
 <tr>
-  <td>RoBERTa (base)</td>
+  <td>RoBERTa&nbsp;(base)</td>
   <td>16</td>
   <td>8k</td>
   <td>125k</td>
   <td>~20GB</td>
   <td>3.66</td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_fairseq.zip">Fairseq</a>&nbsp;
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_transformers.zip">Transformers</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_fairseq.zip">Download</a>
+  </td>
+  <td>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_transformers.zip">Download</a>
   </td>
 </tr>
 <tr>
-  <td>RoBERTa (large)</td>
+  <td>RoBERTa&nbsp;(large)</td>
   <td>24</td>
   <td>30k</td>
   <td>50k</td>
   <td>~135GB</td>
   <td>2.92</td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_fairseq.zip">Fairseq</a>&nbsp;
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_transformers.zip">Transformers</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_fairseq.zip">Download</a>
+  </td>
+  <td>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_transformers.zip">Download</a>
   </td>
 </tr>
 </table>
