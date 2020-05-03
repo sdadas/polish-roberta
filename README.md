@@ -14,7 +14,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 </thead>
 <tr>
   <td>RoBERTa&nbsp;(base)</td>
-  <td>16</td>
+  <td>12</td>
   <td>8k</td>
   <td>125k</td>
   <td>~20GB</td>
