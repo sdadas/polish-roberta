@@ -43,3 +43,45 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 </table>
 
 \* Perplexity of the best checkpoint, computed on the validation split
+
+#### How to use with Fairseq
+
+```python
+import os
+from fairseq.models.roberta import RobertaModel, RobertaHubInterface
+from fairseq import hub_utils
+
+model_path = "roberta_large_fairseq"
+loaded = hub_utils.from_pretrained(
+    model_name_or_path=model_path,
+    data_name_or_path=model_path,
+    bpe="sentencepiece",
+    sentencepiece_vocab=os.path.join(model_path, "sentencepiece.bpe.model"),
+    load_checkpoint_heads=True,
+    archive_map=RobertaModel.hub_models(),
+    cpu=True
+)
+roberta = RobertaHubInterface(loaded['args'], loaded['task'], loaded['models'][0])
+roberta.eval()
+input = roberta.encode("Zażółcić gęślą jaźń.")
+output = roberta.extract_features(input)
+print(output[0][1])
+```
+
+#### How to use with HuggingFace Transformers
+
+```python
+import torch
+from tokenizers import SentencePieceBPETokenizer
+from tokenizers.processors import RobertaProcessing
+from transformers import RobertaModel, AutoModel
+
+model_dir = "roberta_large_transformers"
+tokenizer = SentencePieceBPETokenizer(f"{model_dir}/vocab.json", f"{model_dir}/merges.txt")
+getattr(tokenizer, "_tokenizer").post_processor = RobertaProcessing(sep=("</s>", 2), cls=("<s>", 0))
+model: RobertaModel = AutoModel.from_pretrained(model_dir)
+
+input = tokenizer.encode("Zażółcić gęślą jaźń.")
+output = model(torch.tensor([input.ids]))[0]
+print(output[0][1])
+```
