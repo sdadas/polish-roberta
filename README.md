@@ -4,17 +4,17 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 <table>
 <thead>
 <th>Model</th>
-<th>Encoder blocks</th>
+<th>L / H / A*</th>
 <th>Batch size</th>
 <th>Update steps</th>
 <th>Corpus size</th>
-<th>Final perplexity*</th>
+<th>Final perplexity**</th>
 <th>Fairseq</th>
 <th>Transformers</th>
 </thead>
 <tr>
   <td>RoBERTa&nbsp;(base)</td>
-  <td>12</td>
+  <td>12&nbsp;/&nbsp;768&nbsp;/&nbsp;12</td>
   <td>8k</td>
   <td>125k</td>
   <td>~20GB</td>
@@ -28,7 +28,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 </tr>
 <tr>
   <td>RoBERTa&nbsp;(large)</td>
-  <td>24</td>
+  <td>24&nbsp;/&nbsp;1024&nbsp;/&nbsp;16</td>
   <td>30k</td>
   <td>50k</td>
   <td>~135GB</td>
@@ -42,7 +42,8 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 </tr>
 </table>
 
-\* Perplexity of the best checkpoint, computed on the validation split
+\* L - the number of encoder blocks, H - hidden size, A - the number of attention heads <br/>
+\** Perplexity of the best checkpoint, computed on the validation split
 
 #### How to use with Fairseq
 
