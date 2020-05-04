@@ -45,6 +45,8 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 \* L - the number of encoder blocks, H - hidden size, A - the number of attention heads <br/>
 \** Perplexity of the best checkpoint, computed on the validation split
 
+### Getting started
+
 #### How to use with Fairseq
 
 ```python
@@ -85,4 +87,29 @@ model: RobertaModel = AutoModel.from_pretrained(model_dir)
 input = tokenizer.encode("Zażółcić gęślą jaźń.")
 output = model(torch.tensor([input.ids]))[0]
 print(output[0][1])
+```
+
+### Evaluation
+
+To replicate our experiments, first download the required datasets using `download_data.py` script:
+
+```bash
+python download_data.py
+```
+
+Next, run `run_tasks.py` script to prepare the data, fine-tune and evaluate the model. We used the following parameters for each task:
+
+```bash
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-NKJP --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-CDS-E --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-CDS-R --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 1 --tasks KLEJ-CBD --fp16 True --max-sentences 8 --update-freq 4 --resample 0:0.75,1:3
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-POLEMO-IN --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-POLEMO-OUT --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-DYK --fp16 True --max-sentences 8 --update-freq 4 --resample 0:1,1:3
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-PSC --fp16 True --max-sentences 8 --update-freq 4 --resample 0:1,1:3
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks KLEJ-ECR --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks 8TAGS --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks SICK-E --fp16 True --max-sentences 8 --update-freq 2
+python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks SICK-R --fp16 True --max-sentences 8 --update-freq 2
 ```
