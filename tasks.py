@@ -276,8 +276,11 @@ class KLEJTask(BaseTask):
             has_target = False
         normalizer = self.normalizer()
         with open(input_path, "r", encoding="utf-8") as input_file:
-            reader = csv.DictReader(input_file, dialect="excel-tab")
-            for row in reader:
+            header = input_file.readline().strip().split("\t")
+            for line in input_file:
+                values = [val.strip() for val in line.split("\t")]
+                assert len(header) == len(values), values
+                row = {key: val for key, val in zip(header, values)}
                 yield self.create_example(row, normalizer, has_target)
 
     def normalizer(self):
@@ -350,9 +353,13 @@ class KLEJPolEmoOUTTask(KLEJTask):
 
     def __init__(self):
         self._spec = TaskSpecification("POLEMO2.0-OUT", "classification", 4, 1, "KLEJ")
+        self.labels = ("__label__meta_minus_m", "__label__meta_plus_m", "__label__meta_amb", "__label__meta_zero")
 
     def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text= normalizer.process(row["sentence"].strip())
+        for label in self.labels:
+            if label in text:
+                print(text)
         return DataExample(text, row["target"].strip() if has_target else None)
 
 
