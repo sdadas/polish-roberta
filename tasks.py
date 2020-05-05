@@ -4,8 +4,7 @@ from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Union, List, Iterable, Callable, Dict
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, mean_absolute_error
-from scipy.stats import pearsonr
-import csv
+from scipy.stats import pearsonr, spearmanr
 
 from utils.normalizer import TextNormalizer
 
@@ -26,7 +25,7 @@ class TaskSpecification(object):
         self.task_type: str = task_type
         self.num_labels: int = num_labels
         self.num_inputs: int = num_inputs
-        self.evaluation_metric: Callable = self.accuracy if task_type == "classification" else self.pearson
+        self.evaluation_metric: Callable = self.accuracy if task_type == "classification" else self.corr
         self.no_dev_set = False
 
     def task_path(self) -> str:
@@ -38,8 +37,8 @@ class TaskSpecification(object):
     def accuracy(self, y_true, y_pred):
         return {"accuracy": accuracy_score(y_true, y_pred)}
 
-    def pearson(self, y_true, y_pred):
-        return {"pearson": pearsonr(y_true, y_pred)[0]}
+    def corr(self, y_true, y_pred):
+        return {"pearson": pearsonr(y_true, y_pred)[0], "spearman": spearmanr(y_true, y_pred)[0]}
 
     def f1(self, y_true, y_pred):
         res = precision_recall_fscore_support(y_true, y_pred, average="micro")

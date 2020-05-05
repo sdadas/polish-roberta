@@ -6,7 +6,7 @@ from typing import Dict, List
 
 from run_tasks import TASKS
 
-SCORES = ("accuracy", "binary-f1", "pearson", "1-wmae")
+SCORES = ("accuracy", "binary-f1", "spearman", "1-wmae")
 TASK_NAME_MAPPING = {
     "KLEJ-NKJP": {"name": "nkjp-ner", "target": "target"},
     "KLEJ-CDS-E": {"name": "cdsc-e", "target": "entailment_judgment"},
