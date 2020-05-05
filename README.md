@@ -113,3 +113,29 @@ python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train
 python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks SICK-E --fp16 True --max-sentences 8 --update-freq 2
 python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train-epochs 10 --tasks SICK-R --fp16 True --max-sentences 8 --update-freq 2
 ```
+
+#### Evaluation results on KLEJ Benchmark
+Below we show the evaluation results of our models on the tasks included in [KLEJ Benchmark](https://klejbenchmark.com/). We fine-tuned both models 5 times for each task.
+Detailed scores for each run and averaged scores are presented in Table 1 and Table 2.
+
+| Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
+|---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
+| 1       |   93.15  |  93.30 |  94.26 | 66.67 |     91.97    |     78.74     | 66.86 | 98.63 | 87.75 |  **85.70**  |
+| 2       |   93.93  |  94.20 |  93.94 | 68.16 |     91.83    |     75.91     | 65.93 | 98.77 | 87.93 |  **85.62**  |
+| 3       |   94.22  |  94.20 |  94.04 | 69.23 |     90.17    |     76.92     | 65.69 | 99.24 | 87.76 |  **85.72**  |
+| 4       |   93.97  |  94.70 |  93.98 | 63.81 |     90.44    |     76.32     | 65.18 | 99.39 | 87.58 |  **85.04**  |
+| 5       |   93.63  |  94.00 |  93.96 | 65.95 |     90.58    |     74.09     | 65.92 | 98.48 | 87.08 |  **84.85**  |
+| **Avg** |**93.78** | **94.08** |  **94.04** | **66.77** | **91.00** | **76.40** | **65.92** | **98.90** | **87.62** |  **85.39**  |
+
+Table 1. KLEJ results for RoBERTa base model
+
+| Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
+|---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
+| 1       |   94.31  |  93.50 |  94.63 | 72.39 |     92.80    |     80.54     | 71.87 | 98.63 | 88.82 |  **87.50**  |
+| 2       |   95.14  |  93.90 |  94.93 | 69.82 |     92.80    |     82.59     | 73.39 | 98.94 | 88.96 |  **87.83**  |
+| 3       |   95.24  |  93.30 |  94.61 | 71.59 |     91.41    |     82.19     | 75.35 | 98.64 | 89.31 |  **87.96**  |
+| 4       |   94.46  |  93.20 |  94.96 | 71.08 |     92.80    |     82.39     | 70.59 | 99.09 | 88.60 |  **87.46**  |
+| 5       |   94.46  |  93.00 |  94.82 | 69.83 |     92.11    |     83.00     | 74.85 | 98.79 | 88.65 |  **87.72**  |
+| **Avg** |**94.72** | **93.38** |  **94.79** | **70.94** | **92.38** | **82.14** | **73.21** | **98.82** | **88.87** |  **87.69**  |
+
+Table 2. KLEJ results for RoBERTa large model
