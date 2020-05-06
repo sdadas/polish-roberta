@@ -1,0 +1,6 @@
+requests
+fairseq
+fire
+sentencepiece
+sklearn
+sacremoses
