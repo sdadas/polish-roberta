@@ -123,7 +123,6 @@ class TaskTrainer(object):
             "cache_dir": 'cache',
             "best_model_dir": os.path.join(checkpoint_path, 'best_checkpoint'),
             'learning_rate': float(self.learning_rate),
-            'gradient_accumulation_steps': 1,
             'weight_decay': 0.1,
             'adam_epsilon': 1e-06,
             'save_eval_checkpoints': not self.task.spec().no_dev_set,
@@ -131,7 +130,7 @@ class TaskTrainer(object):
             'train_batch_size': batch_size,
             'eval_batch_size': batch_size,
             'num_train_epochs': max_epoch,
-            'max_seq_length': 512,
+            'max_seq_length': 100,
             'do_lower_case': False,
             'no_cache': True,
             'save_model_every_epoch': True,
@@ -145,7 +144,8 @@ class TaskTrainer(object):
             "warmup_steps": warmup_updates,
             'manual_seed': seed,
             'fp16': False,
-            'max_steps': total_updates
+            'max_steps': total_updates,
+            'gradient_accumulation_steps': update_freq
         }
 
         if self.task.spec().task_type == "classification":
@@ -154,5 +154,9 @@ class TaskTrainer(object):
         else:
             raise Exception(f'Unhandled task type exception: {self.task.spec().task_type}')
 
-        train_data = self.task.read_csv(self.data_path, 'train', label_first=False, normalize=False)
-        model.train_model(train_data, multi_label=False, show_running_loss=True, eval_df=None)
+        train_df = self.task.read_csv(self.data_path, 'train', label_first=False, normalize=False)
+        eval_df = None
+        if not self.task.spec().no_dev_set:
+            eval_df = self.task.read_csv(self.data_path, 'dev', label_first=False, normalize=False)
+
+        model.train_model(train_df, eval_df=eval_df, multi_label=False, show_running_loss=True)
