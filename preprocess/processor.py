@@ -5,6 +5,8 @@ import shutil
 import subprocess
 from typing import TextIO, List, Optional, Dict
 import random
+import string
+import pandas as pd
 
 from preprocess.spm_encode import spm_encode
 from tasks import BaseTask
@@ -12,13 +14,14 @@ from tasks import BaseTask
 
 class TaskProcessor(object):
 
-    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str):
+    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str, model_format: str = 'fairseq'):
         self.task: BaseTask = task
         self.data_path: str = data_path
         self.model_path = model_path
         self.output_path = output_path
         self.task_output_path = os.path.join(self.output_path, task.spec().output_path())
         self.resample = self._parse_resample_string(resample)
+        self.model_format = model_format
         if not os.path.exists(self.task_output_path):
             os.makedirs(self.task_output_path, exist_ok=True)
 
@@ -38,8 +41,11 @@ class TaskProcessor(object):
         self._prepare_split("train")
         self._prepare_split("dev")
         self._prepare_split("test")
-        self._spm_encode()
-        self._fairseq_preprocess()
+        if self.model_format == 'fairseq':
+            self._spm_encode()
+            self._fairseq_preprocess()
+        elif self.model_format == 'transformers':
+            self._transformers_preprocess()
 
     def _resampling_wrapper(self, data_path, split):
         resampled = []
@@ -110,6 +116,23 @@ class TaskProcessor(object):
             self._fairseq_preprocess_input(input_idx, output_path)
         if self.task.spec().task_type == "regression": self._copy_labels(output_path)
         else: self._fairseq_preprocess_labels(output_path)
+
+    def _transformers_preprocess(self):
+        alphabet = list(string.ascii_lowercase)
+        num_inputs: int = self.task.spec().num_inputs
+        for split in ("train", "dev", "test"):
+            processed = {}
+            if split == 'dev' and self.task.spec().no_dev_set: continue
+            for input_idx in range(num_inputs):
+                input_raw_path = os.path.join(self.task_output_path, f'{split}.raw.input{input_idx}')
+                processed[f'text_{alphabet[input_idx]}'] = self._transformers_preprocess_raw(input_raw_path)
+            labels_raw_path = os.path.join(self.task_output_path, f'{split}.label')
+            processed['labels'] = self._transformers_preprocess_raw(labels_raw_path)
+            pd.DataFrame(processed).to_csv(os.path.join(self.task_output_path, f'{split}.tsv'), sep='\t', index=False)
+
+    def _transformers_preprocess_raw(self, raw_file_path: str) -> List:
+        input_io = open(raw_file_path, 'r', newline=None, encoding='utf-8')
+        return list(map(str.strip, input_io.readlines()))
 
     def _copy_labels(self, output_path: str):
         destdir = os.path.join(output_path, "label")

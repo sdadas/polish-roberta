@@ -1,21 +1,24 @@
 import logging
 import os
+import numpy as np
 from typing import List, Callable
 
-from fairseq.models.roberta import RobertaHubInterface
+# from fairseq.models.roberta import RobertaHubInterface
 from tasks import BaseTask
 
 
 class TaskEvaluator(object):
 
-    def __init__(self, task: BaseTask, task_id: str, model: RobertaHubInterface, data_path: str, output_dir: str):
+    def __init__(self, task: BaseTask, task_id: str, model, data_path: str, output_dir: str, model_type: str):
         self.task: BaseTask = task
         self.task_id: str = task_id
-        self.model: RobertaHubInterface = model
+        self.model = model
         self.data_path: str = data_path
         self.output_dir = output_dir
-        self.model.cuda()
-        self.model.eval()
+        self.model_type = model_type
+        if model_type == 'fairseq':
+            self.model.cuda()
+            self.model.eval()
 
     def _get_label(self, label):
         return self.model.task.label_dictionary.string([label + self.model.task.label_dictionary.nspecial])
@@ -36,13 +39,14 @@ class TaskEvaluator(object):
             get_pred_original = get_pred
             postprocess: Callable = self.task.postprocess_prediction
             get_pred = lambda v: postprocess(get_pred_original(v))
-        for record in self.task.read(self.data_path, "test"):
-            tokens = self.model.encode(*record.inputs)
-            if tokens.size()[0] > 512:
-                tokens = tokens[0:512]
-            prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits)
-            y_true.append(get_true(record) if record.label is not None else None)
-            y_pred.append(get_pred(prediction))
+
+        if self.model_type == 'fairseq':
+            for record, prediction in self._fairseq_predict(logits):
+                y_true.append(get_true(record))
+                y_pred.append(get_pred(prediction))
+        elif self.model_type == 'transformers':
+            y_true, y_pred = self._transformers_predict()
+
         if y_true[0] is None:
             logging.info("No test labels available, skipping evaluation for task %s", self.task.spec().output_dir)
             scores = {}
@@ -51,6 +55,21 @@ class TaskEvaluator(object):
             logging.info("scores = %s", scores.__repr__())
         self.save_results(y_pred)
         return scores
+
+    def _fairseq_predict(self, logits):
+        for record in self.task.read(self.data_path, "test"):
+            tokens = self.model.encode(*record.inputs)
+            if tokens.size()[0] > 512:
+                tokens = tokens[0:512]
+            prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits)
+            yield record if record.label is not None else None, prediction
+
+    def _transformers_predict(self):
+        test_data = self.task.read_csv(self.data_path, 'test', label_first=False, normalize=False)
+        _, model_outputs, _ = self.model.eval_model(test_data)
+        y_true = test_data['labels'].tolist()
+        y_pred = np.argmax(model_outputs, axis=1)
+        return y_true, y_pred
 
     def save_results(self, y_pred: List[any]):
         output_path = os.path.join(self.output_dir, f"{self.task_id}.txt")

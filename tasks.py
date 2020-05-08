@@ -5,6 +5,7 @@ from collections import defaultdict
 from typing import Union, List, Iterable, Callable, Dict
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, mean_absolute_error
 from scipy.stats import pearsonr, spearmanr
+import pandas as pd
 
 from utils.normalizer import TextNormalizer
 
@@ -99,6 +100,20 @@ class BaseTask(ABC):
                 text = values[text_idx].strip()
                 text = normalize_func(text)
                 yield DataExample(text, label)
+
+    def read_csv(self, data_path: str, split: str, sep: str= '\t', label_first: bool=True,
+                 normalize: bool=True) -> pd.DataFrame:
+        input_path = os.path.join(data_path, self.spec().task_path(), split + ".tsv")
+        df_data = pd.read_csv(input_path, sep=sep, encoding='utf-8', header=0)
+        if normalize:
+            normalizer = TextNormalizer()
+            label_column_idx = 0 if label_first else -1
+            label_column = df_data.columns[label_column_idx]
+            normalize_func = lambda val: normalizer.process(val)
+            normalized_columns = df_data.columns.difference([label_column])
+            df_data[normalized_columns] = df_data[normalized_columns].applymap(lambda item: normalize_func(item))
+        return df_data
+
 
 class WCCRSHotelsTask(BaseTask):
 

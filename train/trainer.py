@@ -2,27 +2,35 @@ import logging
 import os
 import subprocess
 import random
+import shutil
+import torch
+
+from simpletransformers.classification import ClassificationModel
 
 from tasks import BaseTask
 
 
 class TaskTrainer(object):
 
-    def __init__(self, task: BaseTask, data_path: str, model_path: str, train_size: int,
-                 checkpoint: str="model.pt", arch: str="roberta_large", fp16: bool=False):
+    def __init__(self, task: BaseTask, data_path: str, model_path: str, train_size: int, checkpoint: str="model.pt",
+                 arch: str="roberta_large", fp16: bool=False, model_type: str='fairseq'):
         self.task: BaseTask = task
         self.train_size: int = train_size
         self.data_path: str = data_path
-        self.task_data_path: str = os.path.join(self.data_path, task.spec().output_path() + "-bin")
+        self.task_data_path: str = os.path.join(self.data_path, task.spec().output_path() + "-bin" if model_type == 'fairseq' else '')
         self.model_path: str = model_path
         self.model_name: str = os.path.basename(model_path)
+        self.model_type: str = model_type
         self.checkpoint: str = checkpoint
         self.arch: str = arch
         self.learning_rate = "1e-5"
         self.fp16 = fp16
 
     def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10, seed: int=None):
-        self._run_fairseq_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
+        if self.model_type == 'fairseq':
+            self._run_fairseq_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
+        elif self.model_type == 'transformers':
+            self._run_transformers_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
 
     def _remove_previous_checkpoints(self, checkpoint_path: str):
         checkpoint_last = os.path.join(checkpoint_path, "checkpoint_last.pt")
@@ -101,3 +109,50 @@ class TaskTrainer(object):
             ])
         logging.info("running %s", cmd.__repr__())
         subprocess.run(cmd)
+
+    def _run_transformers_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
+        if seed is None: seed = random.randint(0, 1_000_000)
+        batch_size: int = max_sentences * update_freq
+        total_updates: int = int((self.train_size * max_epoch) / batch_size)
+        warmup_updates: int = int(total_updates / 16.67)
+        checkpoint_path = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
+        if os.path.exists(checkpoint_path): shutil.rmtree(checkpoint_path)
+
+        args = {
+            "output_dir": checkpoint_path,
+            "cache_dir": 'cache',
+            "best_model_dir": os.path.join(checkpoint_path, 'best_checkpoint'),
+            'learning_rate': float(self.learning_rate),
+            'gradient_accumulation_steps': 1,
+            'weight_decay': 0.1,
+            'adam_epsilon': 1e-06,
+            'save_eval_checkpoints': not self.task.spec().no_dev_set,
+            'evaluate_during_training': not self.task.spec().no_dev_set,
+            'train_batch_size': batch_size,
+            'eval_batch_size': batch_size,
+            'num_train_epochs': max_epoch,
+            'max_seq_length': 512,
+            'do_lower_case': False,
+            'no_cache': True,
+            'save_model_every_epoch': True,
+            'tensorboard_dir': None,
+            'overwrite_output_dir': True,
+            'reprocess_input_data': False,
+            'process_count': 1,
+            'n_gpu': 4,
+            'silent': False,
+            'use_multiprocessing': True,
+            "warmup_steps": warmup_updates,
+            'manual_seed': seed,
+            'fp16': False,
+            'max_steps': total_updates
+        }
+
+        if self.task.spec().task_type == "classification":
+            model = ClassificationModel(self.arch, self.model_path, num_labels=self.task.spec().num_labels,
+                                        use_cuda=torch.cuda.is_available(), args=args)
+        else:
+            raise Exception(f'Unhandled task type exception: {self.task.spec().task_type}')
+
+        train_data = self.task.read_csv(self.data_path, 'train', label_first=False, normalize=False)
+        model.train_model(train_data, multi_label=False, show_running_loss=True, eval_df=None)
