@@ -127,12 +127,19 @@ class TaskProcessor(object):
                 input_raw_path = os.path.join(self.task_output_path, f'{split}.raw.input{input_idx}')
                 processed[f'text_{alphabet[input_idx]}'] = self._transformers_preprocess_raw(input_raw_path)
             labels_raw_path = os.path.join(self.task_output_path, f'{split}.label')
-            processed['labels'] = self._transformers_preprocess_raw(labels_raw_path)
+            processed['labels'] = self._transformers_preprocess_raw(labels_raw_path, as_int=True)
             pd.DataFrame(processed).to_csv(os.path.join(self.task_output_path, f'{split}.tsv'), sep='\t', index=False)
 
-    def _transformers_preprocess_raw(self, raw_file_path: str) -> List:
+    def _transformers_preprocess_raw(self, raw_file_path: str, as_int: bool = False) -> List:
         input_io = open(raw_file_path, 'r', newline=None, encoding='utf-8')
-        return list(map(str.strip, input_io.readlines()))
+        processed = list(map(str.strip, input_io.readlines()))
+        if as_int:
+            labels = set()
+            [labels.add(item) for item in processed]
+            labels = list(labels)
+            labels.sort()
+            processed = list(map(labels.index, processed))
+        return processed
 
     def _copy_labels(self, output_path: str):
         destdir = os.path.join(output_path, "label")
