@@ -139,3 +139,12 @@ Table 1. KLEJ results for RoBERTa base model
 | **Avg** |**94.72** | **93.38** |  **94.79** | **70.94** | **92.38** | **82.14** | **73.21** | **98.82** | **88.87** |  **87.69**  |
 
 Table 2. KLEJ results for RoBERTa large model
+
+#### Evaluation results on other tasks
+
+| Task                 | Task type                   | Metric |Base model                   | Large model                  |
+|----------------------|-----------------------------|--------|-----------------------------|------------------------------|
+| [SICK-E](https://github.com/sdadas/polish-sentence-evaluation/tree/master/resources/downstream) | Textual entailment     | Accuracy | 86.13    |  87.67|
+| [SICK-R](https://github.com/sdadas/polish-sentence-evaluation/tree/master/resources/downstream) | Semantic relatedness        | Spearman correlation | 82.26    |  85.63  |
+| [Poleval 2018 - NER](http://2018.poleval.pl/index.php/tasks/)  | Named&nbsp;entity&nbsp;recognition    | F1 score (exact match) | 87.94 | 89.98 |
+| [8TAGS](https://github.com/sdadas/polish-sentence-evaluation/tree/master/resources/downstream) | Multi&nbsp;class&nbsp;classification  | Accuracy | 77.22 | 80.84 |
