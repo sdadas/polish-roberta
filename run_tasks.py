@@ -65,8 +65,9 @@ class TaskRunner(object):
         if self.model_type == 'transformers':
             checkpoints_output_dir = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
             if not self.task.spec().no_dev_set:
-                checkpoints_output_dir = os.path.join(checkpoints_output_dir, 'best_model')
-            model = ClassificationModel(self.arch, checkpoints_output_dir, use_cuda=torch.cuda.is_available())
+                checkpoints_output_dir = os.path.join(checkpoints_output_dir, 'best_checkpoint')
+            model = ClassificationModel(self.arch, checkpoints_output_dir, use_cuda=torch.cuda.is_available(),
+                                        args={'regression': self.task.spec().task_type == 'regression'})
 
             evaluator = TaskEvaluator(self.task, self.task_id, model, self.output_dir, checkpoints_output_dir, model_type='transformers')
             return evaluator.evaluate()

@@ -145,18 +145,16 @@ class TaskTrainer(object):
             'manual_seed': seed,
             'fp16': False,
             'max_steps': total_updates,
-            'gradient_accumulation_steps': update_freq
+            'gradient_accumulation_steps': update_freq,
+            'regression': self.task.spec().task_type == 'regression'
         }
 
-        if self.task.spec().task_type == "classification":
-            model = ClassificationModel(self.arch, self.model_path, num_labels=self.task.spec().num_labels,
+        model = ClassificationModel(self.arch, self.model_path, num_labels=self.task.spec().num_labels,
                                         use_cuda=torch.cuda.is_available(), args=args)
-        else:
-            raise Exception(f'Unhandled task type exception: {self.task.spec().task_type}')
 
-        train_df = self.task.read_csv(self.data_path, 'train', label_first=False, normalize=False)
+        train_df = self.task.read_csv(self.data_path, 'train', label_first=False, normalize=True)
         eval_df = None
         if not self.task.spec().no_dev_set:
-            eval_df = self.task.read_csv(self.data_path, 'dev', label_first=False, normalize=False)
+            eval_df = self.task.read_csv(self.data_path, 'dev', label_first=False, normalize=True)
 
         model.train_model(train_df, eval_df=eval_df, multi_label=False, show_running_loss=True)

@@ -65,10 +65,13 @@ class TaskEvaluator(object):
             yield record if record.label is not None else None, prediction
 
     def _transformers_predict(self):
-        test_data = self.task.read_csv(self.data_path, 'test', label_first=False, normalize=False)
+        test_data = self.task.read_csv(self.data_path, 'test', label_first=False, normalize=True)
         _, model_outputs, _ = self.model.eval_model(test_data)
+        if self.task.spec().task_type == 'regression':
+            y_pred = model_outputs
+        else:
+            y_pred = np.argmax(model_outputs, axis=1)
         y_true = test_data['labels'].tolist()
-        y_pred = np.argmax(model_outputs, axis=1)
         return y_true, y_pred
 
     def save_results(self, y_pred: List[any]):

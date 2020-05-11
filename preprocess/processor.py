@@ -127,7 +127,7 @@ class TaskProcessor(object):
                 input_raw_path = os.path.join(self.task_output_path, f'{split}.raw.input{input_idx}')
                 processed[f'text_{alphabet[input_idx]}'] = self._transformers_preprocess_raw(input_raw_path)
             labels_raw_path = os.path.join(self.task_output_path, f'{split}.label')
-            processed['labels'] = self._transformers_preprocess_raw(labels_raw_path, as_int=True)
+            processed['labels'] = self._transformers_preprocess_raw(labels_raw_path, as_int=False)
             pd.DataFrame(processed).to_csv(os.path.join(self.task_output_path, f'{split}.tsv'), sep='\t', index=False)
 
     def _transformers_preprocess_raw(self, raw_file_path: str, as_int: bool = False) -> List:
