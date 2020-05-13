@@ -103,7 +103,7 @@ class BaseTask(ABC):
 
     def read_csv(self, data_path: str, split: str, sep: str= '\t', label_first: bool=True,
                  normalize: bool=True) -> pd.DataFrame:
-        input_path = os.path.join(data_path, self.spec().task_path(), split + ".tsv")
+        input_path = os.path.join(data_path, self.spec().output_dir, split + ".tsv")
         df_data = pd.read_csv(input_path, sep=sep, encoding='utf-8', header=0)
         if normalize:
             normalizer = TextNormalizer()

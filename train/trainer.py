@@ -152,9 +152,9 @@ class TaskTrainer(object):
         model = ClassificationModel(self.arch, self.model_path, num_labels=self.task.spec().num_labels,
                                         use_cuda=torch.cuda.is_available(), args=args)
 
-        train_df = self.task.read_csv(self.data_path, 'train', label_first=False, normalize=True)
+        train_df = self.task.read_csv(self.data_path, 'train', label_first=False, normalize=False)
         eval_df = None
         if not self.task.spec().no_dev_set:
-            eval_df = self.task.read_csv(self.data_path, 'dev', label_first=False, normalize=True)
+            eval_df = self.task.read_csv(self.data_path, 'dev', label_first=False, normalize=False)
 
         model.train_model(train_df, eval_df=eval_df, multi_label=False, show_running_loss=True)
