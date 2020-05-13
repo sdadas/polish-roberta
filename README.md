@@ -20,10 +20,10 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   <td>~20GB</td>
   <td>3.66</td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_fairseq.zip">Download</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_fairseq.zip">v0.9.0</a>
   </td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_transformers.zip">Download</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_transformers.zip">v2.8.0</a>
   </td>
 </tr>
 <tr>
@@ -34,10 +34,10 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   <td>~135GB</td>
   <td>2.92</td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_fairseq.zip">Download</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_fairseq.zip">v0.9.0</a>
   </td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_transformers.zip">Download</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_transformers.zip">v2.8.0</a>
   </td>
 </tr>
 </table>
