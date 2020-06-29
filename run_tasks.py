@@ -12,6 +12,7 @@ from preprocess.processor import TaskProcessor
 from train.evaluator import TaskEvaluator
 from tasks import *
 from train.trainer import TaskTrainer
+from wsd.tasks import WordSensePolevalTask
 
 logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)
@@ -31,7 +32,8 @@ TASKS = {
     "KLEJ-POLEMO-OUT": KLEJPolEmoOUTTask,
     "KLEJ-DYK":        KLEJDYKTask,
     "KLEJ-PSC":        KLEJPSCTask,
-    "KLEJ-ECR":        KLEJECRRegressionTask
+    "KLEJ-ECR":        KLEJECRRegressionTask,
+    "WSD-POLEVAL":     WordSensePolevalTask
 }
 
 
