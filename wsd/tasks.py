@@ -16,7 +16,6 @@ class WordSensePolevalTask(BaseTask):
 
     def __init__(self) -> None:
         self._spec = TaskSpecification("POLEVAL", "classification", 2, 2, "WSD")
-        self._spec.no_dev_set = True
 
     def quote(self):
         return " ` "
@@ -31,7 +30,7 @@ class WordSensePolevalTask(BaseTask):
         file_path = self.get_path(data_path)
         with open(file_path, "r", encoding="utf-8") as input_file:
             dataset = json.load(input_file)
-        return self.generate_test(dataset) if split == "test" else self.generate_train(dataset)
+        return self.generate_train(dataset) if split == "train" else self.generate_test(dataset)
 
     def generate_train(self, dataset: Dict[str, Any]):
         words = defaultdict(set)
