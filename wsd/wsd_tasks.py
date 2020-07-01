@@ -2,6 +2,7 @@ import itertools
 import json
 import logging
 import os
+from abc import abstractmethod
 from collections import defaultdict
 from random import choice
 from typing import Iterable, Dict, Any, List, Set, Union
@@ -12,13 +13,29 @@ logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)
 
 
-class WordSensePolevalTask(BaseTask):
+class WordSenseTask(BaseTask):
+
+    @abstractmethod
+    def get_dataset(self, data_path: str):
+        raise NotImplementedError
+
+    @abstractmethod
+    def extract_sentences_from_sense(self, sense: Dict[str, Any], sense_words: Union[str,Set]):
+        raise NotImplementedError
+
+
+class WordSensePolevalTask(WordSenseTask):
 
     def __init__(self) -> None:
         self._spec = TaskSpecification("POLEVAL", "classification", 2, 2, "WSD")
 
     def quote(self):
         return " ` "
+
+    def get_dataset(self, data_path: str):
+        file_path = self.get_path(data_path)
+        with open(file_path, "r", encoding="utf-8") as input_file:
+            return json.load(input_file)
 
     def get_path(self, data_path: str) -> str:
         input_path = os.path.join(data_path, self.spec().task_path(), "data.json")
@@ -27,9 +44,7 @@ class WordSensePolevalTask(BaseTask):
         return input_path
 
     def read(self, data_path: str, split: str) -> Iterable[DataExample]:
-        file_path = self.get_path(data_path)
-        with open(file_path, "r", encoding="utf-8") as input_file:
-            dataset = json.load(input_file)
+        dataset = self.get_dataset(data_path)
         return self.generate_train(dataset) if split == "train" else self.generate_test(dataset)
 
     def generate_train(self, dataset: Dict[str, Any]):
@@ -54,7 +69,7 @@ class WordSensePolevalTask(BaseTask):
         sense = dataset["senses"].get(sense_id, None)
         if not sense: return []
         sense_words: Set[str] = words.get(sense_id)
-        sentences = self._extract_sentences_from_sense(sense, sense_words)
+        sentences = self.extract_sentences_from_sense(sense, sense_words)
         if len(sentences) == 0: return []
         res = []
         for first, second in itertools.combinations(sentences, 2):
@@ -67,8 +82,8 @@ class WordSensePolevalTask(BaseTask):
         if not sense1 or not sense2: return []
         sense_words1: Set[str] = words.get(sense_id1)
         sense_words2: Set[str] = words.get(sense_id2)
-        sentences1 = self._extract_sentences_from_sense(sense1, sense_words1)
-        sentences2 = self._extract_sentences_from_sense(sense2, sense_words2)
+        sentences1 = self.extract_sentences_from_sense(sense1, sense_words1)
+        sentences2 = self.extract_sentences_from_sense(sense2, sense_words2)
         if len(sentences1) == 0 or len(sentences2) == 0: return []
         res = []
         for first in sentences1:
@@ -102,12 +117,12 @@ class WordSensePolevalTask(BaseTask):
             sense_object = senses_list.get(sense, None)
             if not sense_object: continue
             label = "1" if sense == sense_id else "0"
-            sentences = self._extract_sentences_from_sense(sense_object, word)
+            sentences = self.extract_sentences_from_sense(sense_object, word)
             for sentence in sentences:
                 results.append(DataExample([text, sentence], label))
         return results
 
-    def _extract_sentences_from_sense(self, sense: Dict[str, Any], sense_words: Union[str,Set]) -> List[str]:
+    def extract_sentences_from_sense(self, sense: Dict[str, Any], sense_words: Union[str,Set]) -> List[str]:
         res = []
         definition = sense.get("def", None)
         if definition:

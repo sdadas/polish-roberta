@@ -12,7 +12,7 @@ from preprocess.processor import TaskProcessor
 from train.evaluator import TaskEvaluator
 from tasks import *
 from train.trainer import TaskTrainer
-from wsd.tasks import WordSensePolevalTask
+from wsd.wsd_tasks import WordSensePolevalTask
 
 logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)

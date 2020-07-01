@@ -2,7 +2,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Union, List, Iterable, Callable, Dict
+from typing import Union, List, Iterable, Callable, Dict, Optional
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, mean_absolute_error
 from scipy.stats import pearsonr, spearmanr
 
@@ -11,7 +11,7 @@ from utils.normalizer import TextNormalizer
 
 class DataExample(object):
 
-    def __init__(self, inputs: Union[str, List], label: str):
+    def __init__(self, inputs: Union[str, List], label: Optional[str]):
         self.inputs: List[str] = [inputs] if isinstance(inputs, str) else inputs
         self.label: str = label
 
