@@ -4,8 +4,7 @@ import logging
 import os
 from abc import abstractmethod
 from collections import defaultdict
-from random import choice
-from typing import Iterable, Dict, Any, List, Set, Union
+from typing import Iterable, Dict, Any, List, Set
 
 from tasks import BaseTask, DataExample, TaskSpecification
 
@@ -20,7 +19,7 @@ class WordSenseTask(BaseTask):
         raise NotImplementedError
 
     @abstractmethod
-    def extract_sentences_from_sense(self, sense: Dict[str, Any], sense_words: Union[str,Set]):
+    def extract_sentences_from_sense(self, sense: Dict[str, Any]):
         raise NotImplementedError
 
 
@@ -53,7 +52,7 @@ class WordSensePolevalTask(WordSenseTask):
             for val in values:
                 words[val].add(key)
         for sense in words.keys():
-            for example in self.generate_intra_sense_examples(dataset, sense, words):
+            for example in self.generate_intra_sense_examples(dataset, sense):
                 yield example
         processed: Set[str] = set()
         for key, values in dataset["words"].items():
@@ -61,29 +60,26 @@ class WordSensePolevalTask(WordSenseTask):
             for sense_id1, sense_id2 in itertools.combinations(values, 2):
                 pair_key = "".join(sorted([sense_id1, sense_id2]))
                 if pair_key in processed: continue
-                for example in self.generate_inter_sense_examples(dataset, sense_id1, sense_id2, words):
+                for example in self.generate_inter_sense_examples(dataset, sense_id1, sense_id2):
                     yield example
                 processed.add(pair_key)
 
-    def generate_intra_sense_examples(self, dataset: Dict[str, Any], sense_id: str, words: Dict[str, Set]):
+    def generate_intra_sense_examples(self, dataset: Dict[str, Any], sense_id: str):
         sense = dataset["senses"].get(sense_id, None)
         if not sense: return []
-        sense_words: Set[str] = words.get(sense_id)
-        sentences = self.extract_sentences_from_sense(sense, sense_words)
+        sentences = self.extract_sentences_from_sense(sense)
         if len(sentences) == 0: return []
         res = []
         for first, second in itertools.combinations(sentences, 2):
             res.append(DataExample([first, second], "1"))
         return res
 
-    def generate_inter_sense_examples(self, dataset: Dict[str, Any], sense_id1: str, sense_id2: str, words: Dict[str, Set]):
+    def generate_inter_sense_examples(self, dataset: Dict[str, Any], sense_id1: str, sense_id2: str):
         sense1 = dataset["senses"].get(sense_id1, None)
         sense2 = dataset["senses"].get(sense_id2, None)
         if not sense1 or not sense2: return []
-        sense_words1: Set[str] = words.get(sense_id1)
-        sense_words2: Set[str] = words.get(sense_id2)
-        sentences1 = self.extract_sentences_from_sense(sense1, sense_words1)
-        sentences2 = self.extract_sentences_from_sense(sense2, sense_words2)
+        sentences1 = self.extract_sentences_from_sense(sense1)
+        sentences2 = self.extract_sentences_from_sense(sense2)
         if len(sentences1) == 0 or len(sentences2) == 0: return []
         res = []
         for first in sentences1:
@@ -117,18 +113,22 @@ class WordSensePolevalTask(WordSenseTask):
             sense_object = senses_list.get(sense, None)
             if not sense_object: continue
             label = "1" if sense == sense_id else "0"
-            sentences = self.extract_sentences_from_sense(sense_object, word)
+            sentences = self.extract_sentences_from_sense(sense_object)
             for sentence in sentences:
                 results.append(DataExample([text, sentence], label))
         return results
 
-    def extract_sentences_from_sense(self, sense: Dict[str, Any], sense_words: Union[str,Set]) -> List[str]:
+    def extract_sentences_from_sense(self, sense: Dict[str, Any]) -> List[str]:
         res = []
         definition = sense.get("def", None)
+        sense_words = set()
+        sense_words.update(sense.get("synonyms"))
+        sense_words.update(sense.get("related"))
         if definition:
-            word = sense_words if isinstance(sense_words, str) else choice(tuple(sense_words))
-            definition = self.quote() + word + self.quote() + ":" + sense["def"].replace("**", "")
-            res.append(definition)
+            definition = self.quote() + ", ".join(sense_words) + self.quote() + ":" + sense["def"].replace("**", "")
+        else:
+            definition = self.quote() + ", ".join(sense_words) + self.quote()
+        res.append(definition)
         sense_examples = sense.get("examples", [])
         for sense_example in sense_examples:
             res.append(sense_example.replace("**", self.quote()))

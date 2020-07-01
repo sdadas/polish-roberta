@@ -1,6 +1,7 @@
 import operator
 import os
 import re
+from collections import Counter
 from typing import Dict, List, Any
 
 from fairseq import hub_utils
@@ -24,6 +25,8 @@ class WordSenseEvaluator(TaskEvaluator):
     def wsd_evaluate(self):
         count = 0
         correct = 0
+        top_errors = Counter()
+        idx = 0
         examples: List[Any] = self.dataset["examples"]
         for example in examples:
             text: str = example["text"]
@@ -41,9 +44,13 @@ class WordSenseEvaluator(TaskEvaluator):
                 not_found = "" if sense_id in scores.keys() else "NOT_FOUND"
                 if sense_id == predicted_sense_id:
                     correct += 1
-                    print("YES %s %s %.2f" % (word, not_found, correct / count,))
+                    print("%d. YES %s %s %.2f" % (idx, word, not_found, correct / count,))
                 else:
-                    print("-   %s %s %.2f" % (word, not_found, correct / count,))
+                    top_errors[word] += 1
+                    print("%d. -   %s %s %.2f" % (idx, word, not_found, correct / count,))
+                idx += 1
+                if (idx % 1000) == 0:
+                    print(top_errors)
 
     def wsd_predict(self, sentence: str, lemma: str=None) -> Dict[str, float]:
         matched = re.search(r'`(.+)`', sentence, re.DOTALL)
@@ -64,7 +71,7 @@ class WordSenseEvaluator(TaskEvaluator):
     def _predict_sense_score(self, sense_id: str, sentence: str, lemma: str) -> float:
         sense = self.dataset["senses"].get(sense_id, None)
         if not sense: return 0
-        sentences = self._task.extract_sentences_from_sense(sense, lemma)
+        sentences = self._task.extract_sentences_from_sense(sense)
         records = [DataExample([sentence, sense_sentence], None) for sense_sentence in sentences]
         matched = 0.0
         for record in records:
