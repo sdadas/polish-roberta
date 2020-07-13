@@ -126,9 +126,9 @@ class WordSensePolevalTask(WordSenseTask):
         sense_words.update(sense.get("related"))
         if definition:
             definition = self.quote() + ", ".join(sense_words) + self.quote() + ":" + sense["def"].replace("**", "")
-        else:
+        elif len(sense_words) > 1:
             definition = self.quote() + ", ".join(sense_words) + self.quote()
-        res.append(definition)
+        if definition: res.append(definition)
         sense_examples = sense.get("examples", [])
         for sense_example in sense_examples:
             res.append(sense_example.replace("**", self.quote()))
