@@ -3,12 +3,14 @@ from random import choice
 
 import fire
 from fairseq import hub_utils
+from fairseq.models.bart import BARTModel, BARTHubInterface
 from fairseq.models.roberta import RobertaModel, RobertaHubInterface
 import fcntl
 from datetime import datetime
 import json
 
 from preprocess.processor import TaskProcessor
+from train.bart import CustomBARTHubInterface
 from train.evaluator import TaskEvaluator
 from tasks import *
 from train.trainer import TaskTrainer
@@ -37,13 +39,14 @@ TASKS = {
 
 class TaskRunner(object):
 
-    def __init__(self, task: BaseTask, task_id: str, input_dir: str, output_dir: str, model_dir: str, seed: int):
+    def __init__(self, task: BaseTask, task_id: str, input_dir: str, output_dir: str, model_dir: str, arch: str, seed: int):
         self.task: BaseTask = task
         self.task_id: str = task_id
         self.input_dir: str = input_dir
         self.output_dir: str = output_dir
         self.model_dir: str = model_dir
         self.seed = seed
+        self.arch = arch
         self.model_name: str = os.path.basename(model_dir)
         self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
 
@@ -51,25 +54,29 @@ class TaskRunner(object):
         processor = TaskProcessor(self.task, self.input_dir, self.output_dir, self.model_dir, resample)
         processor.prepare()
 
-    def train_task(self, arch: str, train_epochs: int, fp16: bool, max_sentences: int, update_freq: int):
+    def train_task(self, train_epochs: int, fp16: bool, max_sentences: int, update_freq: int):
         train_size = self._count_train()
-        trainer = TaskTrainer(self.task, self.output_dir, self.model_dir, train_size, arch=arch, fp16=fp16)
+        trainer = TaskTrainer(self.task, self.output_dir, self.model_dir, train_size, arch=self.arch, fp16=fp16)
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
     def evaluate_task(self):
         checkpoints_output_dir = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
         checkpoint_file = "checkpoint_last.pt" if self.task.spec().no_dev_set else "checkpoint_best.pt"
+        model_classes = {"roberta": (RobertaModel, RobertaHubInterface), "bart": (BARTModel, CustomBARTHubInterface)}
+        arch_type = self.arch.split("_")[0]
+        model_class = model_classes[arch_type][0]
         loaded = hub_utils.from_pretrained(
             model_name_or_path=checkpoints_output_dir,
             checkpoint_file=checkpoint_file,
             data_name_or_path=self.task_output_dir,
             bpe="sentencepiece",
-            sentencepiece_vocab=os.path.join(self.model_dir, "sentencepiece.bpe.model"),
+            sentencepiece_model=os.path.join(self.model_dir, "sentencepiece.bpe.model"),
             load_checkpoint_heads=True,
-            archive_map=RobertaModel.hub_models()
+            archive_map=model_class.hub_models()
         )
-        roberta = RobertaHubInterface(loaded['args'], loaded['task'], loaded['models'][0])
-        evaluator = TaskEvaluator(self.task, self.task_id, roberta, self.input_dir, checkpoints_output_dir)
+        model_interface = model_classes[arch_type][1]
+        model = model_interface(loaded['args'], loaded['task'], loaded['models'][0])
+        evaluator = TaskEvaluator(self.task, self.task_id, model, self.input_dir, checkpoints_output_dir)
         return evaluator.evaluate()
 
     def _count_train(self):
@@ -88,7 +95,7 @@ class TaskRunner(object):
 def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
               evaluation_only: bool=False, resample: str=None, seed: int=None):
-    assert arch in ("roberta_base", "roberta_large")
+    assert arch in ("roberta_base", "roberta_large", "bart_base", "bart_large")
     params = locals()
     if tasks is None:
         task_names = [key for key in TASKS.keys()]
@@ -103,10 +110,10 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
         rand = ''.join(choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(8))
         task_id = task_name.lower() + "_" + rand
         task = task_class()
-        runner: TaskRunner = TaskRunner(task, task_id, input_dir, output_dir, model_dir, seed)
+        runner: TaskRunner = TaskRunner(task, task_id, input_dir, output_dir, model_dir, arch, seed)
         if not evaluation_only:
             runner.prepare_task(resample)
-            runner.train_task(arch, train_epochs, fp16, max_sentences, update_freq)
+            runner.train_task(train_epochs, fp16, max_sentences, update_freq)
         score = runner.evaluate_task()
         runner.log_score(task_name, task_id, params, score)
 

@@ -1,7 +1,10 @@
 import logging
 import os
-import subprocess
 import random
+from typing import List
+
+from fairseq import options
+from fairseq_cli.train import cli_main_helper
 
 from tasks import BaseTask
 
@@ -40,11 +43,9 @@ class TaskTrainer(object):
         checkpoint_path = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
         self._remove_previous_checkpoints(checkpoint_path)
         cmd = [
-            "fairseq-train",
             self.task_data_path,
             "--restore-file", restore_file,
             "--seed", str(seed),
-            "--max-positions", "512",
             "--max-sentences", str(max_sentences),
             "--update-freq", str(update_freq),
             "--max-tokens", "4400",
@@ -76,6 +77,7 @@ class TaskTrainer(object):
             "--save-dir", checkpoint_path,
             "--no-epoch-checkpoints"
         ]
+        self._arch_specific_options(cmd)
         if self.task.spec().no_dev_set:
             cmd.extend([
                 "--disable-validation",
@@ -100,4 +102,22 @@ class TaskTrainer(object):
                 "--fp16-scale-window", "128"
             ])
         logging.info("running %s", cmd.__repr__())
-        subprocess.run(cmd)
+        parser = options.get_training_parser()
+        parser.add_argument("--max-positions", type=int, metavar='N')
+        args = options.parse_args_and_arch(parser, input_args=cmd)
+        cli_main_helper(args)
+
+    def _arch_specific_options(self, cmd: List[str]):
+        if self.arch.startswith("bart"):
+            cmd.extend([
+                "--add-prev-output-tokens",
+                "--layernorm-embedding",
+                "--share-all-embeddings",
+                "--share-decoder-input-output-embed",
+                "--init-token", "0",
+                "--max-positions", "1024",
+            ])
+        else:
+            cmd.extend([
+                "--max-positions", "512",
+            ])
