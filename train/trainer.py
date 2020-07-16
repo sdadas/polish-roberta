@@ -1,10 +1,11 @@
+import importlib
 import logging
 import os
 import random
+import subprocess
 from typing import List
 
 from fairseq import options
-from fairseq_cli.train import cli_main_helper
 
 from tasks import BaseTask
 
@@ -102,11 +103,19 @@ class TaskTrainer(object):
                 "--fp16-scale-window", "128"
             ])
         logging.info("running %s", cmd.__repr__())
-        parser = options.get_training_parser()
-        if self.arch.startswith("bart"):
-            parser.add_argument("--max-positions", type=int)
-        args = options.parse_args_and_arch(parser, input_args=cmd)
-        cli_main_helper(args)
+        self._run_training(cmd)
+
+    def _run_training(self, cmd: List[str]):
+        try:
+            from fairseq_cli.train import cli_main_helper
+            parser = options.get_training_parser()
+            if self.arch.startswith("bart"):
+                parser.add_argument("--max-positions", type=int)
+            args = options.parse_args_and_arch(parser, input_args=cmd)
+            cli_main_helper(args)
+        except ImportError:
+            cmd.insert(0, "fairseq-train")
+            subprocess.run(cmd)
 
     def _arch_specific_options(self, cmd: List[str]):
         if self.arch.startswith("bart"):

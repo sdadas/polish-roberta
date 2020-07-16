@@ -3,7 +3,7 @@ from random import choice
 
 import fire
 from fairseq import hub_utils
-from fairseq.models.bart import BARTModel, BARTHubInterface
+from fairseq.models.bart import BARTModel
 from fairseq.models.roberta import RobertaModel, RobertaHubInterface
 import fcntl
 from datetime import datetime
@@ -65,12 +65,14 @@ class TaskRunner(object):
         model_classes = {"roberta": (RobertaModel, RobertaHubInterface), "bart": (BARTModel, CustomBARTHubInterface)}
         arch_type = self.arch.split("_")[0]
         model_class = model_classes[arch_type][0]
+        spm_path = os.path.join(self.model_dir, "sentencepiece.bpe.model")
         loaded = hub_utils.from_pretrained(
             model_name_or_path=checkpoints_output_dir,
             checkpoint_file=checkpoint_file,
             data_name_or_path=self.task_output_dir,
             bpe="sentencepiece",
-            sentencepiece_model=os.path.join(self.model_dir, "sentencepiece.bpe.model"),
+            sentencepiece_model=spm_path,
+            sentencepiece_vocab=spm_path,
             load_checkpoint_heads=True,
             archive_map=model_class.hub_models()
         )
