@@ -103,7 +103,8 @@ class TaskTrainer(object):
             ])
         logging.info("running %s", cmd.__repr__())
         parser = options.get_training_parser()
-        parser.add_argument("--max-positions", type=int, metavar='N')
+        if self.arch.startswith("bart"):
+            parser.add_argument("--max-positions", type=int)
         args = options.parse_args_and_arch(parser, input_args=cmd)
         cli_main_helper(args)
 

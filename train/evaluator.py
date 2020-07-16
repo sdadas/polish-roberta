@@ -14,6 +14,7 @@ class TaskEvaluator(object):
         self.model: RobertaHubInterface = model
         self.data_path: str = data_path
         self.output_dir = output_dir
+        self.maxlen = model.args.max_positions
         self.model.cuda()
         self.model.eval()
 
@@ -38,8 +39,9 @@ class TaskEvaluator(object):
             get_pred = lambda v: postprocess(get_pred_original(v))
         for record in self.task.read(self.data_path, "test"):
             tokens = self.model.encode(*record.inputs)
-            if tokens.size()[0] > 512:
-                tokens = tokens[0:512]
+            if tokens.size()[0] > self.maxlen:
+                tokens = tokens[0:self.maxlen]
+                tokens[-1] = self.model.task.source_dictionary.eos()
             prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits)
             y_true.append(get_true(record) if record.label is not None else None)
             y_pred.append(get_pred(prediction))
