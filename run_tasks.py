@@ -20,6 +20,7 @@ logging.root.setLevel(logging.DEBUG)
 
 
 TASKS = {
+    # Polish tasks
     "WCCRS_HOTELS":    WCCRSHotelsTask,
     "WCCRS_MEDICINE":  WCCRSMedicineTask,
     "SICK-E":          SICKEntailmentTask,
@@ -33,7 +34,19 @@ TASKS = {
     "KLEJ-POLEMO-OUT": KLEJPolEmoOUTTask,
     "KLEJ-DYK":        KLEJDYKTask,
     "KLEJ-PSC":        KLEJPSCTask,
-    "KLEJ-ECR":        KLEJECRRegressionTask
+    "KLEJ-ECR":        KLEJECRRegressionTask,
+
+    # English tasks
+    "GLUE-COLA":       GLUECoLATask,
+    "GLUE-MNLI-MA":    GLUEMNLIMatchedTask,
+    "GLUE-MNLI-MI":    GLUEMNLIMismatchedTask,
+    "GLUE-QQP":        GLUEQQPTask,
+    "GLUE-QNLI":       GLUEQNLITask,
+    "GLUE-MRPC":       GLUEMRPCTask,
+    "GLUE-RTE":        GLUERTETask,
+    "GLUE-STS-B":      GLUESTSBTask,
+    "GLUE-SST-2":      GLUESST2Task,
+    "GLUE-AX":         GLUEDiagnosticsTask
 }
 
 

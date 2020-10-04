@@ -3,7 +3,7 @@ import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Union, List, Iterable, Callable, Dict
-from sklearn.metrics import precision_recall_fscore_support, accuracy_score, mean_absolute_error
+from sklearn.metrics import precision_recall_fscore_support, accuracy_score, mean_absolute_error, matthews_corrcoef
 from scipy.stats import pearsonr, spearmanr
 
 from utils.normalizer import TextNormalizer
@@ -40,16 +40,20 @@ class TaskSpecification(object):
     def corr(self, y_true, y_pred):
         return {"pearson": pearsonr(y_true, y_pred)[0], "spearman": spearmanr(y_true, y_pred)[0]}
 
+    def mcc(self, y_true, y_pred):
+        return {"mcc": matthews_corrcoef(y_true, y_pred)}
+
     def f1(self, y_true, y_pred):
         res = precision_recall_fscore_support(y_true, y_pred, average="micro")
-        return {"precision": res[0], "recall": res[1], "micro-f1": res[2]}
+        acc = accuracy_score(y_true, y_pred)
+        return {"precision": res[0], "recall": res[1], "micro-f1": res[2], "accuracy": acc}
 
     def binary_f1(self, y_true, y_pred):
         y_true = [int(val) for val in y_true]
         y_pred = [int(val) for val in y_pred]
         res = precision_recall_fscore_support(y_true, y_pred, average="binary")
-        logging.debug(res)
-        return {"precision": res[0], "recall": res[1], "binary-f1": res[2]}
+        acc = accuracy_score(y_true, y_pred)
+        return {"precision": res[0], "recall": res[1], "binary-f1": res[2], "accuracy": acc}
 
     def wmae(self, y_true, y_pred):
         if(isinstance(y_true[0], str)):
@@ -442,3 +446,208 @@ class KLEJECRClassificationTask(KLEJTask):
     def create_example(self, row: Dict, normalizer: TextNormalizer, has_target: bool) -> DataExample:
         text = row["text"].strip()
         return DataExample(text, row["rating"].strip() if has_target else None)
+
+
+class GLUETask(BaseTask):
+
+    def read_data_file(self, data_path: str, split: str, file_name: str, has_header: bool):
+        input_path = os.path.join(data_path, self.spec().task_path(), file_name)
+        normalizer = self.normalizer()
+        with open(input_path, "r", encoding="utf-8") as input_file:
+            if has_header:
+                _ = input_file.readline().strip().split("\t")
+            for line in input_file:
+                row = [val.strip() for val in line.split("\t")]
+                yield self.create_example(row, normalizer, split)
+
+    def normalizer(self):
+        return TextNormalizer(detokenize=False, lang="en")
+
+    @abstractmethod
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        raise NotImplementedError
+
+
+class GLUECoLATask(GLUETask):
+
+    def __init__(self) -> None:
+        self._spec = TaskSpecification("CoLA", "classification", 2, 1, "GLUE")
+        self._spec.evaluation_metric = self._spec.mcc
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_data_file(data_path, split, split + ".tsv", split != "test")
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text = row[3 if split != "test" else 1].strip()
+        label = row[1] if split != "test" else None
+        return DataExample(text, label)
+
+
+class GLUEQQPTask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("QQP", "classification", 2, 2, "GLUE")
+        self._spec.evaluation_metric = self._spec.binary_f1
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_data_file(data_path, split, split + ".tsv", True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text1 = row[3 if split != "test" else 1].strip()
+        text2 = row[4 if split != "test" else 2].strip()
+        label = row[5] if split != "test" else None
+        return DataExample([text1, text2], label)
+
+
+class GLUEMNLIMatchedTask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("MNLI", "classification", 3, 2, "GLUE")
+        self._spec.output_dir = "MNLI-Matched"
+        self._spec.evaluation_metric = self._spec.accuracy
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        file_name = "train.tsv" if split == "train" else split + "_matched.tsv"
+        return self.read_data_file(data_path, split, file_name, True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text1 = row[8].strip()
+        text2 = row[9].strip()
+        label = row[11] if split == "train" else row[15] if split == "dev" else None
+        return DataExample([text1, text2], label)
+
+
+class GLUEMNLIMismatchedTask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("MNLI", "classification", 3, 2, "GLUE")
+        self._spec.output_dir = "MNLI-Mismatched"
+        self._spec.evaluation_metric = self._spec.accuracy
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        file_name = "train.tsv" if split == "train" else split + "_mismatched.tsv"
+        return self.read_data_file(data_path, split, file_name, True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text1 = row[8].strip()
+        text2 = row[9].strip()
+        label = row[11] if split == "train" else row[15] if split == "dev" else None
+        return DataExample([text1, text2], label)
+
+
+class GLUEQNLITask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("QNLI", "classification", 3, 2, "GLUE")
+        self._spec.evaluation_metric = self._spec.accuracy
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_data_file(data_path, split, split + ".tsv", True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text1 = row[1].strip()
+        text2 = row[2].strip()
+        label = row[3] if split != "test" else None
+        return DataExample([text1, text2], label)
+
+
+class GLUEMRPCTask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("MRPC", "classification", 2, 2, "GLUE")
+        self._spec.no_dev_set = True
+        self._spec.evaluation_metric = self._spec.binary_f1
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_data_file(data_path, split, "msr_paraphrase_" + split + ".txt", True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text1 = row[3].strip()
+        text2 = row[4].strip()
+        label = row[0]
+        return DataExample([text1, text2], label)
+
+
+class GLUERTETask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("RTE", "classification", 2, 2, "GLUE")
+        self._spec.evaluation_metric = self._spec.accuracy
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_data_file(data_path, split, split + ".tsv", True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text1 = row[1].strip()
+        text2 = row[2].strip()
+        label = row[3] if split != "test" else None
+        return DataExample([text1, text2], label)
+
+
+class GLUESTSBTask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("STS-B", "regression", 1, 2, "GLUE")
+        self._spec.evaluation_metric = self._spec.corr
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_data_file(data_path, split, split + ".tsv", True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text1 = row[7].strip()
+        text2 = row[8].strip()
+        if split != "test":
+            score = float(row[9]) - 1.0
+            score = "%.5f" % (score / 4.0,)
+        else:
+            score = None
+        return DataExample([text1, text2], score)
+
+    def format_output(self, value: float):
+        return "%.2f" % (1 + value * 4,)
+
+    def postprocess_prediction(self, value: float):
+        score = min(max(1 + value * 4, 0), 5)
+        score = round(score)
+        return (score - 1.0) / 4.0
+
+
+class GLUESST2Task(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("SST-2", "classification", 2, 1, "GLUE")
+        self._spec.evaluation_metric = self._spec.accuracy
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_data_file(data_path, split, split + ".tsv", True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        text = row[0 if split != "test" else 1].strip()
+        label = row[1] if split != "test" else None
+        return DataExample(text, label)
+
+
+class GLUEDiagnosticsTask(GLUETask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("AX", "classification", 3, 2, "GLUE")
+        self._spec.no_dev_set = True
+        self._spec.evaluation_metric = self._spec.mcc
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        assert split in ("train", "test")
+        if split == "train":
+            return self.read_data_file(data_path, split, "../MNLI/train.tsv", True)
+        elif split == "test":
+            return self.read_data_file(data_path, split, "AX.tsv", True)
+
+    def create_example(self, row: List[str], normalizer: TextNormalizer, split: str) -> DataExample:
+        if split == "train":
+            text1 = row[8].strip()
+            text2 = row[9].strip()
+            label = row[11]
+        else:
+            text1 = row[1].strip()
+            text2 = row[2].strip()
+            label = None
+        return DataExample([text1, text2], label)

@@ -99,8 +99,8 @@ emoji = {
 
 class TextNormalizer(object):
 
-    def __init__(self, detokenize: bool=True, replace_emoji: bool=True):
-        self._moses = MosesDetokenizer(lang="pl")
+    def __init__(self, detokenize: bool=True, replace_emoji: bool=True, lang: str="pl"):
+        self._moses = MosesDetokenizer(lang=lang)
         self._detokenize = detokenize
         self._replace_emoji = replace_emoji
 
