@@ -1,4 +1,5 @@
 import os
+import sys
 import zipfile
 
 import requests
@@ -24,7 +25,7 @@ def get_data(url: str, extract_dir: str, task_name: str, dataset_dir: str=None):
     os.remove(fname)
 
 
-if __name__ == '__main__':
+def polish():
     output_dir = "data"
     # KLEJ datasets
     KLEJ = "https://klejbenchmark.com/static/data/{}.zip"
@@ -44,3 +45,29 @@ if __name__ == '__main__':
     get_data(PSE.format("SICK"), output_dir, "SICK", dataset_dir=os.path.join(output_dir, "SICK"))
     get_data(PSE.format("WCCRS_HOTELS"), output_dir, "WCCRS_HOTELS", dataset_dir=os.path.join(output_dir, "WCCRS_HOTELS"))
     get_data(PSE.format("WCCRS_MEDICINE"), output_dir, "WCCRS_MEDICINE", dataset_dir=os.path.join(output_dir, "WCCRS_MEDICINE"))
+
+
+def english():
+    output_dir = "data"
+    # GLUE datasets
+    GLUE = "https://dl.fbaipublicfiles.com/glue/data/{}.zip"
+    glue_dir = os.path.join(output_dir, "GLUE")
+    get_data(GLUE.format("CoLA"), glue_dir, "COLA", dataset_dir=os.path.join(glue_dir, "CoLA"))
+    get_data(GLUE.format("SST-2"), glue_dir, "SST-2", dataset_dir=os.path.join(glue_dir, "SST-2"))
+    get_data(GLUE.format("STS-B"), glue_dir, "STS-B", dataset_dir=os.path.join(glue_dir, "STS-B"))
+    get_data(GLUE.format("QQP-clean"), glue_dir, "QQP", dataset_dir=os.path.join(glue_dir, "QQP"))
+    get_data(GLUE.format("MNLI"), glue_dir, "MNLI", dataset_dir=os.path.join(glue_dir, "MNLI"))
+    get_data(GLUE.format("QNLIv2"), glue_dir, "QNLI", dataset_dir=os.path.join(glue_dir, "QNLI"))
+    get_data(GLUE.format("RTE"), glue_dir, "RTE", dataset_dir=os.path.join(glue_dir, "RTE"))
+    get_data(GLUE.format("WNLI"), glue_dir, "WNLI", dataset_dir=os.path.join(glue_dir, "WNLI"))
+    PRD = "https://github.com/sdadas/polish-roberta/releases/download/english-datasets/{}.zip"
+    get_data(PRD.format("MRPC"), os.path.join(glue_dir, "MRPC"), "MRPC")
+    get_data(PRD.format("AX"), os.path.join(glue_dir, "AX"), "AX")
+
+
+if __name__ == '__main__':
+    lang = "polish" if len(sys.argv) < 1 else sys.argv[1]
+    if lang == "polish":
+        polish()
+    elif lang == "english":
+        english()
