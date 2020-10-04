@@ -1,4 +1,3 @@
-import importlib
 import logging
 import os
 import random
@@ -12,8 +11,8 @@ from tasks import BaseTask
 
 class TaskTrainer(object):
 
-    def __init__(self, task: BaseTask, data_path: str, model_path: str, train_size: int,
-                 checkpoint: str="model.pt", arch: str="roberta_large", fp16: bool=False):
+    def __init__(self, task: BaseTask, data_path: str, model_path: str, train_size: int, checkpoint: str="model.pt",
+                 arch: str="roberta_large", fp16: bool=False, token_shapes: bool=False):
         self.task: BaseTask = task
         self.train_size: int = train_size
         self.data_path: str = data_path
@@ -24,6 +23,7 @@ class TaskTrainer(object):
         self.arch: str = arch
         self.learning_rate = "1e-5"
         self.fp16 = fp16
+        self.token_shapes = token_shapes
 
     def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10, seed: int=None):
         self._run_fairseq_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
@@ -42,6 +42,7 @@ class TaskTrainer(object):
         restore_file = os.path.join(self.model_path, self.checkpoint)
         assert os.path.exists(restore_file)
         checkpoint_path = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
+        task = "sentence_prediction" if not self.token_shapes else "sentence_prediction_with_token_shapes"
         self._remove_previous_checkpoints(checkpoint_path)
         cmd = [
             self.task_data_path,
@@ -50,7 +51,7 @@ class TaskTrainer(object):
             "--max-sentences", str(max_sentences),
             "--update-freq", str(update_freq),
             "--max-tokens", "4400",
-            "--task", "sentence_prediction",
+            "--task", task,
             "--reset-optimizer",
             "--reset-dataloader",
             "--reset-meters",
@@ -107,12 +108,12 @@ class TaskTrainer(object):
 
     def _run_training(self, cmd: List[str]):
         try:
-            from fairseq_cli.train import cli_main_helper
+            from fairseq_cli.train import main
             parser = options.get_training_parser()
             if self.arch.startswith("bart"):
                 parser.add_argument("--max-positions", type=int)
             args = options.parse_args_and_arch(parser, input_args=cmd)
-            cli_main_helper(args)
+            main(args)
         except ImportError:
             cmd.insert(0, "fairseq-train")
             subprocess.run(cmd)

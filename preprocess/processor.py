@@ -12,12 +12,14 @@ from tasks import BaseTask
 
 class TaskProcessor(object):
 
-    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str):
+    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str,
+                 token_shapes: bool=False):
         self.task: BaseTask = task
         self.data_path: str = data_path
         self.model_path = model_path
         self.output_path = output_path
         self.task_output_path = os.path.join(self.output_path, task.spec().output_path())
+        self.token_shapes = token_shapes
         self.resample = self._parse_resample_string(resample)
         if not os.path.exists(self.task_output_path):
             os.makedirs(self.task_output_path, exist_ok=True)
@@ -142,5 +144,8 @@ class TaskProcessor(object):
             dict_path: str = os.path.join(self.model_path, "dict.txt")
             cmd.append("--srcdict")
             cmd.append(dict_path)
+            if self.token_shapes:
+                cmd.append("--task")
+                cmd.append("masked_lm_with_token_shapes")
         logging.info("running %s", cmd.__repr__())
         subprocess.run(cmd)
