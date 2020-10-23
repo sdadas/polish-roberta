@@ -23,7 +23,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_fairseq.zip">v0.9.0</a>
   </td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-transformers-v2.9.0/roberta_base_transformers.zip">v2.9</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-transformers-v3.4.0/roberta_base_transformers.zip">v3.4</a>
   </td>
 </tr>
 <tr>
@@ -37,7 +37,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_fairseq.zip">v0.9.0</a>
   </td>
   <td>
-  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-transformers-v2.9.0/roberta_large_transformers.zip">v2.9</a>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-transformers-v3.4.0/roberta_large_transformers.zip">v3.4</a>
   </td>
 </tr>
 </table>
@@ -87,18 +87,14 @@ print(output[0][1])
 #### How to use with HuggingFace Transformers
 
 ```python
-import torch
-from tokenizers import SentencePieceBPETokenizer
-from tokenizers.processors import RobertaProcessing
-from transformers import RobertaModel, AutoModel
+import torch, os
+from transformers import RobertaModel, AutoModel, PreTrainedTokenizerFast
 
-model_dir = "roberta_large_transformers"
-tokenizer = SentencePieceBPETokenizer(f"{model_dir}/vocab.json", f"{model_dir}/merges.txt")
-getattr(tokenizer, "_tokenizer").post_processor = RobertaProcessing(sep=("</s>", 2), cls=("<s>", 0))
+model_dir = "roberta_base_transformers"
+tokenizer = PreTrainedTokenizerFast(tokenizer_file=os.path.join(model_dir, "tokenizer.json"))
 model: RobertaModel = AutoModel.from_pretrained(model_dir)
-
 input = tokenizer.encode("Zażółcić gęślą jaźń.")
-output = model(torch.tensor([input.ids]))[0]
+output = model(torch.tensor([input]))[0]
 print(output[0][1])
 ```
 
