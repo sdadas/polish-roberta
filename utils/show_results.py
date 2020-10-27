@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from utils.table import TablePrinter, TableColumn
 
-SCORES = ("accuracy", "binary-f1", "spearman", "1-wmae")
+SCORES = ("binary-f1", "accuracy", "spearman", "1-wmae")
 
 def parse_runlog(path: str):
     results = defaultdict(lambda: defaultdict(list))
