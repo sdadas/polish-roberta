@@ -48,13 +48,14 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 More details are available in the paper [Pre-training Polish Transformer-based Language Models at Scale](https://arxiv.org/abs/2006.04229).
 
 ```
-@misc{dadas2020pretraining,
-    title={Pre-training Polish Transformer-based Language Models at Scale},
-    author={Sławomir Dadas and Michał Perełkiewicz and Rafał Poświata},
-    year={2020},
-    eprint={2006.04229},
-    archivePrefix={arXiv},
-    primaryClass={cs.CL}
+@InProceedings{dadas2020pretraining,
+  title="Pre-training Polish Transformer-Based Language Models at Scale",
+  author="Dadas, S{\l}awomir and Pere{\l}kiewicz, Micha{\l} and Po{\'{s}}wiata, Rafa{\l}",
+  booktitle="Artificial Intelligence and Soft Computing",
+  year="2020",
+  publisher="Springer International Publishing",
+  pages="301--314",
+  isbn="978-3-030-61534-5"
 }
 ```
 
