@@ -66,7 +66,7 @@ def english():
 
 
 if __name__ == '__main__':
-    lang = "polish" if len(sys.argv) < 1 else sys.argv[1]
+    lang = "polish" if len(sys.argv) < 2 else sys.argv[1]
     if lang == "polish":
         polish()
     elif lang == "english":

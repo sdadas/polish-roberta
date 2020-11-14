@@ -4,7 +4,7 @@ import random
 import subprocess
 from typing import List
 
-from fairseq import options
+from fairseq import options, __version__ as fairseq_verison
 
 from tasks import BaseTask
 
@@ -48,8 +48,6 @@ class TaskTrainer(object):
             self.task_data_path,
             "--restore-file", restore_file,
             "--seed", str(seed),
-            "--max-sentences", str(max_sentences),
-            "--update-freq", str(update_freq),
             "--max-tokens", "4400",
             "--task", task,
             "--reset-optimizer",
@@ -79,6 +77,17 @@ class TaskTrainer(object):
             "--save-dir", checkpoint_path,
             "--no-epoch-checkpoints"
         ]
+        if fairseq_verison == "0.9.0":
+            cmd.extend([
+                "--max-sentences", str(max_sentences),
+                "--update-freq", str(update_freq)
+            ])
+        else:
+            cmd.extend([
+                "--batch-size", str(max_sentences),
+                "--update-freq", str(update_freq)
+            ])
+
         self._arch_specific_options(cmd)
         if self.task.spec().no_dev_set:
             cmd.extend([
