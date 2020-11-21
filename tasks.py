@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 from abc import ABC, abstractmethod
@@ -92,8 +93,8 @@ class BaseTask(ABC):
     def spec(self) -> TaskSpecification:
         return self.__getattribute__("_spec")
 
-    def get_split_path(self, data_path: str, split: str) -> str:
-        input_path = os.path.join(data_path, self.spec().task_path(), split + ".txt")
+    def get_split_path(self, data_path: str, split: str, extension: str="txt") -> str:
+        input_path = os.path.join(data_path, self.spec().task_path(), split + "." + extension)
         if not os.path.exists(input_path):
             raise FileNotFoundError(input_path)
         return input_path
@@ -663,6 +664,22 @@ class GLUEDiagnosticsTask(GLUETask):
         return DataExample([text1, text2], label)
 
 
+class PPCTask(BaseTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("PPC", "classification", 3, 2)
+        self._spec.evaluation_metric = self._spec.accuracy
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        if split == "dev": split = "test"
+        split_path = self.get_split_path(data_path, split, extension="jsonl")
+        with open(split_path, "r", encoding="utf-8") as input_file:
+            for line in input_file:
+                obj = json.loads(line.strip())
+                sent1, sent2, label = obj["sent1"], obj["sent2"], obj["label"]
+                yield DataExample([sent1, sent2], label)
+
+
 TASKS = {
     # Polish tasks
     "WCCRS_HOTELS":    WCCRSHotelsTask,
@@ -679,6 +696,7 @@ TASKS = {
     "KLEJ-DYK":        KLEJDYKTask,
     "KLEJ-PSC":        KLEJPSCTask,
     "KLEJ-ECR":        KLEJECRRegressionTask,
+    "PPC":             PPCTask,
 
     # English tasks
     "GLUE-COLA":       GLUECoLATask,
