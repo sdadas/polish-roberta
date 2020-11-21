@@ -2,52 +2,17 @@ import string
 from random import choice
 
 import fire
-from fairseq import hub_utils
-from fairseq.models.bart import BARTModel
-from fairseq.models.roberta import RobertaModel, RobertaHubInterface
 import fcntl
 from datetime import datetime
 import json
 
 from preprocess.processor import TaskProcessor
-from train.bart import CustomBARTHubInterface
-from train.evaluator import TaskEvaluator
+from train.evaluator import TaskEvaluatorBuilder
 from tasks import *
 from train.trainer import TaskTrainer
 
 logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)
-
-
-TASKS = {
-    # Polish tasks
-    "WCCRS_HOTELS":    WCCRSHotelsTask,
-    "WCCRS_MEDICINE":  WCCRSMedicineTask,
-    "SICK-E":          SICKEntailmentTask,
-    "SICK-R":          SICKRelatednessTask,
-    "8TAGS":           EightTagsTask,
-    "KLEJ-NKJP":       KLEJNKJPTask,
-    "KLEJ-CDS-E":      KLEJCDSEntailmentTask,
-    "KLEJ-CDS-R":      KLEJCDSRelatednessTask,
-    "KLEJ-CBD":        KLEJCBDTask,
-    "KLEJ-POLEMO-IN":  KLEJPolEmoINTask,
-    "KLEJ-POLEMO-OUT": KLEJPolEmoOUTTask,
-    "KLEJ-DYK":        KLEJDYKTask,
-    "KLEJ-PSC":        KLEJPSCTask,
-    "KLEJ-ECR":        KLEJECRRegressionTask,
-
-    # English tasks
-    "GLUE-COLA":       GLUECoLATask,
-    "GLUE-MNLI-MA":    GLUEMNLIMatchedTask,
-    "GLUE-MNLI-MI":    GLUEMNLIMismatchedTask,
-    "GLUE-QQP":        GLUEQQPTask,
-    "GLUE-QNLI":       GLUEQNLITask,
-    "GLUE-MRPC":       GLUEMRPCTask,
-    "GLUE-RTE":        GLUERTETask,
-    "GLUE-STS-B":      GLUESTSBTask,
-    "GLUE-SST-2":      GLUESST2Task,
-    "GLUE-AX":         GLUEDiagnosticsTask
-}
 
 
 class TaskRunner(object):
@@ -74,26 +39,9 @@ class TaskRunner(object):
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
     def evaluate_task(self):
-        checkpoints_output_dir = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
-        checkpoint_file = "checkpoint_last.pt" if self.task.spec().no_dev_set else "checkpoint_best.pt"
-        model_classes = {"roberta": (RobertaModel, RobertaHubInterface), "bart": (BARTModel, CustomBARTHubInterface)}
-        arch_type = self.arch.split("_")[0]
-        model_class = model_classes[arch_type][0]
-        spm_path = os.path.join(self.model_dir, "sentencepiece.bpe.model")
-        loaded = hub_utils.from_pretrained(
-            model_name_or_path=checkpoints_output_dir,
-            checkpoint_file=checkpoint_file,
-            data_name_or_path=self.task_output_dir,
-            bpe="sentencepiece",
-            sentencepiece_model=spm_path,
-            sentencepiece_vocab=spm_path,
-            load_checkpoint_heads=True,
-            archive_map=model_class.hub_models()
-        )
-        model_interface = model_classes[arch_type][1]
-        model = model_interface(loaded['args'], loaded['task'], loaded['models'][0])
-        evaluator = TaskEvaluator(self.task, self.task_id, model, self.input_dir, checkpoints_output_dir)
-        return evaluator.evaluate()
+        builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir, self.output_dir)
+        evaluator = builder.build()
+        return evaluator.evaluate(self.task_id)
 
     def _count_train(self):
         return sum(1 for _ in self.task.read(self.input_dir, "train"))

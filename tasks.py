@@ -2,7 +2,7 @@ import logging
 import os
 from abc import ABC, abstractmethod
 from collections import defaultdict
-from typing import Union, List, Iterable, Callable, Dict
+from typing import Union, List, Iterable, Callable, Dict, Optional
 from sklearn.metrics import precision_recall_fscore_support, accuracy_score, mean_absolute_error, matthews_corrcoef
 from scipy.stats import pearsonr, spearmanr
 
@@ -11,7 +11,7 @@ from utils.normalizer import TextNormalizer
 
 class DataExample(object):
 
-    def __init__(self, inputs: Union[str, List], label: str):
+    def __init__(self, inputs: Union[str, List], label: Optional[str]):
         self.inputs: List[str] = [inputs] if isinstance(inputs, str) else inputs
         self.label: str = label
 
@@ -27,6 +27,16 @@ class TaskSpecification(object):
         self.num_inputs: int = num_inputs
         self.evaluation_metric: Callable = self.accuracy if task_type == "classification" else self.corr
         self.no_dev_set = False
+
+    def to_json(self):
+        return {
+            "dir": self.task_dir,
+            "group": self.group_dir,
+            "type": self.task_type,
+            "num_labels": self.num_labels,
+            "num_inputs": self.num_inputs,
+            "metric": self.evaluation_metric.__name__
+        }
 
     def task_path(self) -> str:
         return self.task_dir if not self.group_dir else f"{self.group_dir}/{self.task_dir}"
@@ -651,3 +661,34 @@ class GLUEDiagnosticsTask(GLUETask):
             text2 = row[2].strip()
             label = None
         return DataExample([text1, text2], label)
+
+
+TASKS = {
+    # Polish tasks
+    "WCCRS_HOTELS":    WCCRSHotelsTask,
+    "WCCRS_MEDICINE":  WCCRSMedicineTask,
+    "SICK-E":          SICKEntailmentTask,
+    "SICK-R":          SICKRelatednessTask,
+    "8TAGS":           EightTagsTask,
+    "KLEJ-NKJP":       KLEJNKJPTask,
+    "KLEJ-CDS-E":      KLEJCDSEntailmentTask,
+    "KLEJ-CDS-R":      KLEJCDSRelatednessTask,
+    "KLEJ-CBD":        KLEJCBDTask,
+    "KLEJ-POLEMO-IN":  KLEJPolEmoINTask,
+    "KLEJ-POLEMO-OUT": KLEJPolEmoOUTTask,
+    "KLEJ-DYK":        KLEJDYKTask,
+    "KLEJ-PSC":        KLEJPSCTask,
+    "KLEJ-ECR":        KLEJECRRegressionTask,
+
+    # English tasks
+    "GLUE-COLA":       GLUECoLATask,
+    "GLUE-MNLI-MA":    GLUEMNLIMatchedTask,
+    "GLUE-MNLI-MI":    GLUEMNLIMismatchedTask,
+    "GLUE-QQP":        GLUEQQPTask,
+    "GLUE-QNLI":       GLUEQNLITask,
+    "GLUE-MRPC":       GLUEMRPCTask,
+    "GLUE-RTE":        GLUERTETask,
+    "GLUE-STS-B":      GLUESTSBTask,
+    "GLUE-SST-2":      GLUESST2Task,
+    "GLUE-AX":         GLUEDiagnosticsTask
+}
