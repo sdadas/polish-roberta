@@ -122,6 +122,8 @@ class TaskTrainer(object):
             if self.arch.startswith("bart"):
                 parser.add_argument("--max-positions", type=int)
             args = options.parse_args_and_arch(parser, input_args=cmd)
+            if self.arch.startswith("bart"):
+                args.spectral_norm_classification_head = False
             main(args)
         except ImportError:
             cmd.insert(0, "fairseq-train")
@@ -135,7 +137,7 @@ class TaskTrainer(object):
                 "--share-all-embeddings",
                 "--share-decoder-input-output-embed",
                 "--init-token", "0",
-                "--max-positions", "1024",
+                "--max-positions", "1024"
             ])
         else:
             cmd.extend([
