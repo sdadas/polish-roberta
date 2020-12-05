@@ -4,7 +4,6 @@ from random import choice
 import fire
 import fcntl
 from datetime import datetime
-import json
 
 from preprocess.processor import TaskProcessor
 from train.evaluator import TaskEvaluatorBuilder
@@ -38,8 +37,8 @@ class TaskRunner(object):
                               arch=self.arch, fp16=fp16, token_shapes=token_shapes)
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
-    def evaluate_task(self):
-        builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir, self.output_dir)
+    def evaluate_task(self, verbose: bool=False):
+        builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir, self.output_dir, verbose)
         evaluator = builder.build()
         return evaluator.evaluate(self.task_id)
 
@@ -58,7 +57,7 @@ class TaskRunner(object):
 
 def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
-              evaluation_only: bool=False, resample: str=None, token_shapes: bool=False, seed: int=None):
+              evaluation_only: bool=False, resample: str=None, token_shapes: bool=False, seed: int=None, verbose=False):
     assert arch in ("roberta_base", "roberta_large", "bart_base", "bart_large")
     params = locals()
     if tasks is None:
@@ -78,7 +77,7 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
         if not evaluation_only:
             runner.prepare_task(resample, token_shapes)
             runner.train_task(train_epochs, fp16, max_sentences, update_freq, token_shapes)
-        score = runner.evaluate_task()
+        score = runner.evaluate_task(verbose)
         runner.log_score(task_name, task_id, params, score)
 
 

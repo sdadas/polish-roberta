@@ -11,12 +11,13 @@ from train.bart import CustomBARTHubInterface
 
 class TaskEvaluator(object):
 
-    def __init__(self, task: BaseTask, model: RobertaHubInterface, data_path: str, output_dir: str):
+    def __init__(self, task: BaseTask, model: RobertaHubInterface, data_path: str, output_dir: str, verbose=False):
         self.task: BaseTask = task
         self.model: RobertaHubInterface = model
         self.data_path: str = data_path
         self.output_dir = output_dir
         self.maxlen = model.args.max_positions
+        self.log_predictions = verbose
         self.model.cuda()
         self.model.eval()
         self._init_prediction_settings()
@@ -59,8 +60,15 @@ class TaskEvaluator(object):
         if tokens.size()[0] > self.maxlen:
             tokens = tokens[0:self.maxlen]
         prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits or self.logits)
+        if self.log_predictions and record.label is not None: self.log_prediction(prediction, record)
         if logits: return prediction
         else: return self.get_pred(prediction)
+
+    def log_prediction(self, prediction, record: DataExample):
+        y_pred = self.get_pred(prediction)
+        y_true = record.label
+        x = "\t".join(record.inputs)
+        logging.info(f"true={y_true}\tpred={y_pred}\t{x}")
 
     def save_results(self, y_pred: List[any], task_id: str):
         output_path = os.path.join(self.output_dir, f"{task_id}.txt")
@@ -76,12 +84,14 @@ class TaskEvaluator(object):
 
 class TaskEvaluatorBuilder(object):
 
-    def __init__(self, task: BaseTask, arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed"):
+    def __init__(self, task: BaseTask, arch: str, model_dir: str, input_dir: str="data",
+                 output_dir: str="data_processed", verbose=False):
         self.task = task
         self.arch = arch
         self.model_dir = model_dir
         self.input_dir = input_dir
         self.output_dir = output_dir
+        self.verbose = verbose
         self.model_name = os.path.basename(model_dir)
         self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
 
@@ -104,6 +114,6 @@ class TaskEvaluatorBuilder(object):
         )
         model_interface = model_classes[arch_type][1]
         model = model_interface(loaded['args'], loaded['task'], loaded['models'][0])
-        evaluator = TaskEvaluator(self.task, model, self.input_dir, checkpoints_output_dir)
+        evaluator = TaskEvaluator(self.task, model, self.input_dir, checkpoints_output_dir, self.verbose)
         return evaluator
 
