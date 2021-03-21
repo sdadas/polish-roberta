@@ -1,6 +1,8 @@
 ### Polish RoBERTa
 This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692) models for Polish as well as evaluation code for several Polish linguistic tasks. The released models were trained using [Fairseq toolkit](https://github.com/pytorch/fairseq) in the National Information Processing Institute, Warsaw, Poland. We provide two models based on BERT base and BERT large architectures. Two versions of each model are available: one for [Fairseq](https://github.com/pytorch/fairseq) and one for [Huggingface Transformers](https://github.com/huggingface/transformers).
 
+**21.03.2021** - We release a new version of the base model. The updated model has been trained on the same corpus as the original model but we used different hyperparameters. We made the following changes: 1) Sentencepiece Unigram model was used instead of BPE, 2) The model was trained with whole-word masking objective instead of classic token masking, 3) We utilized the full context of 512 tokens so training examples could include more than one sentence (the original model was trained on single sencentes only), 4) Longer pretraining (400k steps).
+
 <table>
 <thead>
 <th>Model</th>
@@ -8,7 +10,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 <th>Batch size</th>
 <th>Update steps</th>
 <th>Corpus size</th>
-<th>Final perplexity**</th>
+<th>KLEJ Score**</th> 
 <th>Fairseq</th>
 <th>Transformers</th>
 </thead>
@@ -18,7 +20,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   <td>8k</td>
   <td>125k</td>
   <td>~20GB</td>
-  <td>3.66</td>
+  <td>85.39</td>
   <td>
   <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_base_fairseq.zip">v0.9.0</a>
   </td>
@@ -27,12 +29,26 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   </td>
 </tr>
 <tr>
+  <td>RoBERTa-v2&nbsp;(base)</td>
+  <td>12&nbsp;/&nbsp;768&nbsp;/&nbsp;12</td>
+  <td>8k</td>
+  <td>400k</td>
+  <td>~20GB</td>
+  <td>86.72</td>
+  <td>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-v2/roberta_base_fairseq.zip">v0.10.1</a>
+  </td>
+  <td>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-v2/roberta_base_transformers.zip">v4.4</a>
+  </td>
+</tr>
+<tr>
   <td>RoBERTa&nbsp;(large)</td>
   <td>24&nbsp;/&nbsp;1024&nbsp;/&nbsp;16</td>
   <td>30k</td>
   <td>50k</td>
   <td>~135GB</td>
-  <td>2.92</td>
+  <td>87.69</td>
   <td>
   <a href="https://github.com/sdadas/polish-roberta/releases/download/models/roberta_large_fairseq.zip">v0.9.0</a>
   </td>
@@ -43,7 +59,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 </table>
 
 \* L - the number of encoder blocks, H - hidden size, A - the number of attention heads <br/>
-\** Perplexity of the best checkpoint, computed on the validation split
+\** Average KLEJ score over 5 runs, see evaluation section for detailed results<br/>
 
 More details are available in the paper [Pre-training Polish Transformer-based Language Models at Scale](https://arxiv.org/abs/2006.04229).
 
@@ -141,6 +157,17 @@ Table 1. KLEJ results for RoBERTa base model
 
 | Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
 |---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
+| 1       |   94.80  |  94.20 |  94.30 | 69.62 |     90.58    |     78.74     | 71.23 | 98.62 | 87.99 |  **86.68**  |
+| 2       |   94.27  |  94.50 |  94.44 | 70.67 |     90.17    |     78.95     | 69.64 | 99.08 | 87.98 |  **86.63**  |
+| 3       |   93.73  |  94.30 |  94.64 | 70.67 |     91.41    |     78.14     | 74.44 | 98.92 | 87.64 |  **87.10**  |
+| 4       |   94.07  |  93.90 |  94.58 | 70.00 |     91.00    |     78.14     | 69.94 | 98.93 | 87.22 |  **86.42**  |
+| 5       |   94.31  |  94.20 |  94.71 | 70.46 |     91.00    |     77.94     | 71.67 | 98.48 | 88.15 |  **86.77**  |
+| **Avg** |**94.24** | **94.22** |  **94.54** | **70.28** | **90.83** | **78.38** | **71.38** | **98.81** | **87.80** |  **86.72**  |
+
+Table 2. KLEJ results for RoBERTa-v2 base model
+
+| Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
+|---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
 | 1       |   94.31  |  93.50 |  94.63 | 72.39 |     92.80    |     80.54     | 71.87 | 98.63 | 88.82 |  **87.50**  |
 | 2       |   95.14  |  93.90 |  94.93 | 69.82 |     92.80    |     82.59     | 73.39 | 98.94 | 88.96 |  **87.83**  |
 | 3       |   95.24  |  93.30 |  94.61 | 71.59 |     91.41    |     82.19     | 75.35 | 98.64 | 89.31 |  **87.96**  |
@@ -148,11 +175,11 @@ Table 1. KLEJ results for RoBERTa base model
 | 5       |   94.46  |  93.00 |  94.82 | 69.83 |     92.11    |     83.00     | 74.85 | 98.79 | 88.65 |  **87.72**  |
 | **Avg** |**94.72** | **93.38** |  **94.79** | **70.94** | **92.38** | **82.14** | **73.21** | **98.82** | **88.87** |  **87.69**  |
 
-Table 2. KLEJ results for RoBERTa large model
+Table 3. KLEJ results for RoBERTa large model
 
 #### Evaluation results on other tasks
 
-| Task                 | Task type                   | Metric |Base model                   | Large model                  |
+| Task                 | Task type                   | Metric |Base model                  | Large model                  |
 |----------------------|-----------------------------|--------|-----------------------------|------------------------------|
 | [SICK-E](https://github.com/sdadas/polish-sentence-evaluation/tree/master/resources/downstream) | Textual entailment     | Accuracy | 86.13    |  87.67|
 | [SICK-R](https://github.com/sdadas/polish-sentence-evaluation/tree/master/resources/downstream) | Semantic relatedness        | Spearman correlation | 82.26    |  85.63  |
