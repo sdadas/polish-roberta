@@ -29,7 +29,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   </td>
 </tr>
 <tr>
-  <td>RoBERTa-v2&nbsp;(base)</td>
+  <td>RoBERTa&#8209;v2&nbsp;(base)</td>
   <td>12&nbsp;/&nbsp;768&nbsp;/&nbsp;12</td>
   <td>8k</td>
   <td>400k</td>
