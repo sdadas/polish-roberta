@@ -16,7 +16,7 @@ class TaskEvaluator(object):
         self.model: RobertaHubInterface = model
         self.data_path: str = data_path
         self.output_dir = output_dir
-        self.maxlen = model.args.max_positions
+        self.maxlen = model.cfg.task.tokens_per_sample if hasattr(model, "cfg") else model.args.max_positions
         self.log_predictions = verbose
         self.model.cuda()
         self.model.eval()
@@ -113,7 +113,8 @@ class TaskEvaluatorBuilder(object):
             archive_map=model_class.hub_models()
         )
         model_interface = model_classes[arch_type][1]
-        model = model_interface(loaded['args'], loaded['task'], loaded['models'][0])
+        if isinstance(loaded, model_interface): model = loaded
+        else: model = model_interface(loaded['args'], loaded['task'], loaded['models'][0])
         evaluator = TaskEvaluator(self.task, model, self.input_dir, checkpoints_output_dir, self.verbose)
         return evaluator
 
