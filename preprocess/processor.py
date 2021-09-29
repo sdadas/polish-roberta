@@ -1,8 +1,8 @@
 import logging
 import multiprocessing
-import os
 import shutil
 import subprocess
+import os
 from typing import TextIO, List, Optional, Dict
 import random
 
@@ -12,15 +12,14 @@ from tasks import BaseTask
 
 class TaskProcessor(object):
 
-    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str,
-                 token_shapes: bool=False):
+    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str):
         self.task: BaseTask = task
         self.data_path: str = data_path
         self.model_path = model_path
         self.output_path = output_path
         self.task_output_path = os.path.join(self.output_path, task.spec().output_path())
-        self.token_shapes = token_shapes
         self.resample = self._parse_resample_string(resample)
+        self.cli_path = os.environ.get("CLI_PATH", "")
         if not os.path.exists(self.task_output_path):
             os.makedirs(self.task_output_path, exist_ok=True)
 
@@ -131,7 +130,7 @@ class TaskProcessor(object):
 
     def _run_fairseq_preprocess(self, input_name: str, destdir: str):
         cpus = multiprocessing.cpu_count()
-        cmd = ["fairseq-preprocess", "--only-source", "--workers", str(cpus), "--destdir", destdir]
+        cmd = [f"{self.cli_path}fairseq-preprocess", "--only-source", "--workers", str(cpus), "--destdir", destdir]
         for split in ("train", "dev", "test"):
             if input_name == "label" and split == "test": continue
             if split == "dev" and self.task.spec().no_dev_set: continue
@@ -144,8 +143,5 @@ class TaskProcessor(object):
             dict_path: str = os.path.join(self.model_path, "dict.txt")
             cmd.append("--srcdict")
             cmd.append(dict_path)
-            if self.token_shapes:
-                cmd.append("--task")
-                cmd.append("masked_lm_with_token_shapes")
         logging.info("running %s", cmd.__repr__())
         subprocess.run(cmd)

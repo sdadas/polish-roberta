@@ -16,7 +16,11 @@ class TaskEvaluator(object):
         self.model: RobertaHubInterface = model
         self.data_path: str = data_path
         self.output_dir = output_dir
-        self.maxlen = model.cfg.task.tokens_per_sample if hasattr(model, "cfg") else model.args.max_positions
+        if hasattr(model, "cfg"):
+            try: self.maxlen = model.cfg.task.max_positions
+            except: self.maxlen = model.cfg.task.tokens_per_sample
+        else:
+            self.maxlen = model.args.max_positions
         self.log_predictions = verbose
         self.model.cuda()
         self.model.eval()
@@ -100,6 +104,7 @@ class TaskEvaluatorBuilder(object):
         checkpoint_file = "checkpoint_last.pt" if self.task.spec().no_dev_set else "checkpoint_best.pt"
         model_classes = {"roberta": (RobertaModel, RobertaHubInterface), "bart": (BARTModel, CustomBARTHubInterface)}
         arch_type = self.arch.split("_")[0]
+        if arch_type.startswith("xlmr"): arch_type = "roberta"
         model_class = model_classes[arch_type][0]
         spm_path = os.path.join(self.model_dir, "sentencepiece.bpe.model")
         loaded = hub_utils.from_pretrained(
