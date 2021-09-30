@@ -31,10 +31,10 @@ class TaskRunner(object):
         processor = TaskProcessor(self.task, self.input_dir, self.output_dir, self.model_dir, resample)
         processor.prepare()
 
-    def train_task(self, train_epochs: int, fp16: bool, max_sentences: int, update_freq: int,
+    def train_task(self, train_epochs: int, fp16: bool, lr: str, max_sentences: int, update_freq: int,
                    ddp_backend: str, cpu_offload: bool):
         train_size = self._count_train()
-        trainer = TaskTrainer(self.task, self.output_dir, self.model_dir, train_size,
+        trainer = TaskTrainer(self.task, self.output_dir, self.model_dir, train_size, lr=lr,
                               arch=self.arch, fp16=fp16, ddp_backend=ddp_backend, cpu_offload=cpu_offload)
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
@@ -57,7 +57,7 @@ class TaskRunner(object):
             fcntl.flock(output_file, fcntl.LOCK_UN)
 
 
-def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed",
+def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed", lr: str="1e-5",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
               evaluation_only: bool=False, resample: str=None, seed: int=None, verbose=False,
               ddp_backend: str="pytorch_ddp", cpu_offload: bool=False):
@@ -79,7 +79,7 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
         runner: TaskRunner = TaskRunner(task, task_id, input_dir, output_dir, model_dir, arch, seed)
         if not evaluation_only:
             runner.prepare_task(resample)
-            runner.train_task(train_epochs, fp16, max_sentences, update_freq, ddp_backend, cpu_offload)
+            runner.train_task(train_epochs, fp16, lr, max_sentences, update_freq, ddp_backend, cpu_offload)
         sharded_model = ddp_backend == "fully_sharded" and cpu_offload
         score = runner.evaluate_task(verbose, sharded_model)
         runner.log_score(task_name, task_id, params, score)

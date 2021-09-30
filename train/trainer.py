@@ -5,6 +5,7 @@ import subprocess
 import glob
 from typing import List
 
+import torch
 from fairseq import options, __version__ as fairseq_verison
 
 from tasks import BaseTask
@@ -13,7 +14,8 @@ from tasks import BaseTask
 class TaskTrainer(object):
 
     def __init__(self, task: BaseTask, data_path: str, model_path: str, train_size: int, checkpoint: str="model.pt",
-                 arch: str="roberta_large", fp16: bool=False, ddp_backend: str="pytorch_ddp", cpu_offload: bool=False):
+                 arch: str="roberta_large", fp16: bool=False, ddp_backend: str="pytorch_ddp", cpu_offload: bool=False,
+                 lr: str="1e-5"):
         self.task: BaseTask = task
         self.train_size: int = train_size
         self.data_path: str = data_path
@@ -22,7 +24,7 @@ class TaskTrainer(object):
         self.model_name: str = os.path.basename(model_path)
         self.checkpoint: str = checkpoint
         self.arch: str = arch
-        self.learning_rate = "1e-5"
+        self.learning_rate = str(lr)
         self.fp16 = fp16
         self.ddp_backend = ddp_backend
         self.cpu_offload = cpu_offload if ddp_backend == "fully_sharded" else False
@@ -40,7 +42,7 @@ class TaskTrainer(object):
 
     def _run_fairseq_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
         if seed is None: seed = random.randint(0, 1_000_000)
-        batch_size: int = max_sentences * update_freq
+        batch_size: int = max_sentences * update_freq * torch.cuda.device_count()
         total_updates: int = int((self.train_size * max_epoch) / batch_size)
         warmup_updates: int = int(total_updates / 16.67)
         restore_file = os.path.join(self.model_path, self.checkpoint)
