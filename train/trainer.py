@@ -2,6 +2,7 @@ import logging
 import os
 import random
 import subprocess
+import glob
 from typing import List
 
 from fairseq import options, __version__ as fairseq_verison
@@ -31,10 +32,11 @@ class TaskTrainer(object):
         self._run_fairseq_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
 
     def _remove_previous_checkpoints(self, checkpoint_path: str):
-        checkpoint_last = os.path.join(checkpoint_path, "checkpoint_last.pt")
-        if os.path.exists(checkpoint_last): os.remove(checkpoint_last)
-        checkpoint_best = os.path.join(checkpoint_path, "checkpoint_best.pt")
-        if os.path.exists(checkpoint_best): os.remove(checkpoint_best)
+        pattern = os.path.join(checkpoint_path, "checkpoint*")
+        found_checkpoint_files = glob.glob(pattern)
+        for checkpoint in found_checkpoint_files:
+            logging.info("Removing old checkpoint file %s", checkpoint)
+            os.remove(checkpoint)
 
     def _run_fairseq_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
         if seed is None: seed = random.randint(0, 1_000_000)
@@ -119,7 +121,8 @@ class TaskTrainer(object):
             cmd.extend([
                 "--cpu-offload",
                 "--no-reshard-after-forward",
-                "--no-save-optimizer-state"
+                "--no-save-optimizer-state",
+                "--use-sharded-state"
             ])
         logging.info("running %s", cmd.__repr__())
         self._run_training(cmd)

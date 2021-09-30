@@ -38,8 +38,9 @@ class TaskRunner(object):
                               arch=self.arch, fp16=fp16, ddp_backend=ddp_backend, cpu_offload=cpu_offload)
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
-    def evaluate_task(self, verbose: bool=False):
-        builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir, self.output_dir, verbose)
+    def evaluate_task(self, verbose: bool=False, sharded_model: bool=False):
+        builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir, self.output_dir,
+                                       verbose=verbose, sharded_model=sharded_model)
         evaluator = builder.build()
         return evaluator.evaluate(self.task_id)
 
@@ -79,7 +80,8 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
         if not evaluation_only:
             runner.prepare_task(resample)
             runner.train_task(train_epochs, fp16, max_sentences, update_freq, ddp_backend, cpu_offload)
-        score = runner.evaluate_task(verbose)
+        sharded_model = ddp_backend == "fully_sharded" and cpu_offload
+        score = runner.evaluate_task(verbose, sharded_model)
         runner.log_score(task_name, task_id, params, score)
 
 

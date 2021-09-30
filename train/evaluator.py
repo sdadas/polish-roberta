@@ -1,8 +1,10 @@
+import argparse
 import logging
 import os
 from typing import List, Callable
 
-from fairseq import hub_utils
+import torch.cuda
+from fairseq import utils
 from fairseq.models.bart import BARTModel
 from fairseq.models.roberta import RobertaModel, RobertaHubInterface
 from tasks import BaseTask, DataExample
@@ -89,7 +91,7 @@ class TaskEvaluator(object):
 class TaskEvaluatorBuilder(object):
 
     def __init__(self, task: BaseTask, arch: str, model_dir: str, input_dir: str="data",
-                 output_dir: str="data_processed", verbose=False):
+                 output_dir: str="data_processed", verbose=False, sharded_model=False):
         self.task = task
         self.arch = arch
         self.model_dir = model_dir
@@ -98,6 +100,7 @@ class TaskEvaluatorBuilder(object):
         self.verbose = verbose
         self.model_name = os.path.basename(model_dir)
         self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
+        self.sharded_model = sharded_model
 
     def build(self) -> TaskEvaluator:
         checkpoints_output_dir = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
@@ -107,7 +110,7 @@ class TaskEvaluatorBuilder(object):
         if arch_type.startswith("xlmr"): arch_type = "roberta"
         model_class = model_classes[arch_type][0]
         spm_path = os.path.join(self.model_dir, "sentencepiece.bpe.model")
-        loaded = hub_utils.from_pretrained(
+        loaded = self.from_pretrained(
             model_name_or_path=checkpoints_output_dir,
             checkpoint_file=checkpoint_file,
             data_name_or_path=self.task_output_dir,
@@ -115,7 +118,9 @@ class TaskEvaluatorBuilder(object):
             sentencepiece_model=spm_path,
             sentencepiece_vocab=spm_path,
             load_checkpoint_heads=True,
-            archive_map=model_class.hub_models()
+            archive_map=model_class.hub_models(),
+            num_shards=torch.cuda.device_count() if self.sharded_model else 1,
+            strict=not self.sharded_model
         )
         model_interface = model_classes[arch_type][1]
         if isinstance(loaded, model_interface): model = loaded
@@ -123,3 +128,51 @@ class TaskEvaluatorBuilder(object):
         evaluator = TaskEvaluator(self.task, model, self.input_dir, checkpoints_output_dir, self.verbose)
         return evaluator
 
+    def from_pretrained(self, model_name_or_path, checkpoint_file="model.pt", data_name_or_path=".",
+                        archive_map=None, num_shards=1, strict=False, **kwargs):
+        from fairseq import checkpoint_utils, file_utils
+
+        if archive_map is not None:
+            if model_name_or_path in archive_map:
+                model_name_or_path = archive_map[model_name_or_path]
+            if data_name_or_path is not None and data_name_or_path in archive_map:
+                data_name_or_path = archive_map[data_name_or_path]
+
+            # allow archive_map to set default arg_overrides (e.g., tokenizer, bpe)
+            # for each model
+            if isinstance(model_name_or_path, dict):
+                for k, v in model_name_or_path.items():
+                    if k == "checkpoint_file":
+                        checkpoint_file = v
+                    elif (
+                            k != "path"
+                            # only set kwargs that don't already have overrides
+                            and k not in kwargs
+                    ):
+                        kwargs[k] = v
+                model_name_or_path = model_name_or_path["path"]
+
+        model_path = file_utils.load_archive_file(model_name_or_path)
+
+        # convenience hack for loading data and BPE codes from model archive
+        if data_name_or_path.startswith("."):
+            kwargs["data"] = os.path.abspath(os.path.join(model_path, data_name_or_path))
+        else:
+            kwargs["data"] = file_utils.load_archive_file(data_name_or_path)
+        for file, arg in {
+            "code": "bpe_codes",
+            "bpecodes": "bpe_codes",
+            "sentencepiece.bpe.model": "sentencepiece_model",
+        }.items():
+            path = os.path.join(model_path, file)
+            if os.path.exists(path):
+                kwargs[arg] = path
+
+        if "user_dir" in kwargs:
+            utils.import_user_module(argparse.Namespace(user_dir=kwargs["user_dir"]))
+
+        models, args, task = checkpoint_utils.load_model_ensemble_and_task(
+            [os.path.join(model_path, cpt) for cpt in checkpoint_file.split(os.pathsep)],
+            arg_overrides=kwargs, num_shards=num_shards, strict=strict
+        )
+        return {"args": args, "task": task, "models": models}
