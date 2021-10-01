@@ -1,6 +1,8 @@
 import json
 import logging
+import random
 import os
+from itertools import chain
 from abc import ABC, abstractmethod
 from collections import defaultdict
 from typing import Union, List, Iterable, Callable, Dict, Optional
@@ -114,6 +116,50 @@ class BaseTask(ABC):
                 text = values[text_idx].strip()
                 text = normalize_func(text)
                 yield DataExample(text, label)
+
+
+class CrossValidatedTask(BaseTask):
+
+    def __init__(self, wrapped_task: BaseTask, num_folds: int=4):
+        self.wrapped_task: BaseTask = wrapped_task
+        self.num_folds = num_folds
+        self.folds = None
+        self._spec = wrapped_task.spec()
+        self.set_fold(0)
+
+    def set_fold(self, fold: int):
+        self.fold = fold
+        self._spec.output_dir = f"{self._spec.task_dir}-fold{self.fold}"
+
+    def _read_folds(self, data_path: str):
+        data: List[DataExample] = []
+        for record in self.wrapped_task.read(data_path, "train"):
+            data.append(record)
+        random.shuffle(data)
+        folds = [[] for _ in range(self.num_folds)]
+        for idx, record in enumerate(data):
+            fold_idx = idx % self.num_folds
+            folds[fold_idx].append(record)
+        return folds
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        if self.folds is None:
+            self.folds = self._read_folds(data_path)
+        if split == "dev":
+            return self.wrapped_task.read(data_path, split)
+        elif split == "train":
+            folds = [self.folds[idx] for idx in range(self.num_folds) if idx != self.fold]
+            return chain(*folds)
+        elif split == "test":
+            return [rec for rec in self.folds[self.fold]]
+
+    @staticmethod
+    def cv_folds(wrapped_task: BaseTask, num_folds: int=4) -> Iterable[BaseTask]:
+        task = CrossValidatedTask(wrapped_task, num_folds)
+        for fold in range(num_folds):
+            task.set_fold(fold)
+            yield task
+
 
 class WCCRSHotelsTask(BaseTask):
 

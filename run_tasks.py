@@ -25,7 +25,6 @@ class TaskRunner(object):
         self.seed = seed
         self.arch = arch
         self.model_name: str = os.path.basename(model_dir)
-        self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
 
     def prepare_task(self, resample: str):
         processor = TaskProcessor(self.task, self.input_dir, self.output_dir, self.model_dir, resample)
@@ -60,7 +59,7 @@ class TaskRunner(object):
 def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed", lr: str="1e-5",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
               evaluation_only: bool=False, resample: str=None, seed: int=None, verbose=False,
-              ddp_backend: str="pytorch_ddp", cpu_offload: bool=False):
+              ddp_backend: str=None, cpu_offload: bool=False, cv_folds: int=1):
     assert arch in ("roberta_base", "roberta_large", "bart_base", "bart_large", "xlmr.xl")
     params = locals()
     if tasks is None:
@@ -74,15 +73,20 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
         task_name = task_names[idx]
         if task_class is None: raise Exception(f"Unknown task {task_name}")
         rand = ''.join(choice(string.ascii_uppercase + string.ascii_lowercase + string.digits) for _ in range(8))
-        task_id = task_name.lower() + "_" + rand
         task = task_class()
-        runner: TaskRunner = TaskRunner(task, task_id, input_dir, output_dir, model_dir, arch, seed)
-        if not evaluation_only:
-            runner.prepare_task(resample)
-            runner.train_task(train_epochs, fp16, lr, max_sentences, update_freq, ddp_backend, cpu_offload)
-        sharded_model = ddp_backend == "fully_sharded" and cpu_offload
-        score = runner.evaluate_task(verbose, sharded_model)
-        runner.log_score(task_name, task_id, params, score)
+        task_id = task_name.lower() + "_" + rand
+        cross_validation = cv_folds > 1
+        task_runs = CrossValidatedTask.cv_folds(task, cv_folds) if cross_validation else [task]
+        for idx, task_run in enumerate(task_runs):
+            task_run_id = task_id
+            if cross_validation: task_run_id += f"-fold{idx}"
+            runner: TaskRunner = TaskRunner(task_run, task_run_id, input_dir, output_dir, model_dir, arch, seed)
+            if not evaluation_only:
+                runner.prepare_task(resample)
+                runner.train_task(train_epochs, fp16, lr, max_sentences, update_freq, ddp_backend, cpu_offload)
+            sharded_model = ddp_backend == "fully_sharded" and cpu_offload
+            score = runner.evaluate_task(verbose, sharded_model)
+            runner.log_score(task_name, task_run_id, params, score)
 
 
 if __name__ == '__main__':

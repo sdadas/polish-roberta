@@ -81,9 +81,10 @@ class TaskTrainer(object):
             "--log-format", "simple",
             "--log-interval", "5",
             "--save-dir", checkpoint_path,
-            "--no-epoch-checkpoints",
-            "--ddp-backend", self.ddp_backend
+            "--no-epoch-checkpoints"
         ]
+        if self.ddp_backend is not None: cmd.extend(["--ddp-backend", self.ddp_backend])
+        else: cmd.extend(["--distributed-world-size", "1"])
         if fairseq_verison == "0.9.0":
             cmd.extend([
                 "--max-sentences", str(max_sentences),
@@ -130,23 +131,17 @@ class TaskTrainer(object):
         self._run_training(cmd)
 
     def _run_training(self, cmd: List[str]):
-        if self.ddp_backend == "fully_sharded":
-            self._run_training_legacy(cmd)
+        if self.arch.startswith("bart"):
+            from fairseq_cli.train import main
+            parser = options.get_training_parser()
+            parser.add_argument("--max-positions", type=int)
+            args = options.parse_args_and_arch(parser, input_args=cmd)
+            args.spectral_norm_classification_head = False
+            main(args)
         else:
-            try:
-                from fairseq_cli.train import main
-                parser = options.get_training_parser()
-                if self.arch.startswith("bart"):
-                    parser.add_argument("--max-positions", type=int)
-                args = options.parse_args_and_arch(parser, input_args=cmd)
-                if self.arch.startswith("bart"):
-                    args.spectral_norm_classification_head = False
-                main(args)
-            except ImportError:
-                self._run_training_legacy(cmd)
+            self._run_training_cmd(cmd)
 
-
-    def _run_training_legacy(self, cmd: List[str]):
+    def _run_training_cmd(self, cmd: List[str]):
         cmd.insert(0, f"{self.cli_path}fairseq-train")
         subprocess.run(cmd)
 
