@@ -42,7 +42,8 @@ class TaskTrainer(object):
 
     def _run_fairseq_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
         if seed is None: seed = random.randint(0, 1_000_000)
-        batch_size: int = max_sentences * update_freq * torch.cuda.device_count()
+        device_count = torch.cuda.device_count() if self.ddp_backend is not None else 1
+        batch_size: int = max_sentences * update_freq * device_count
         total_updates: int = int((self.train_size * max_epoch) / batch_size)
         warmup_updates: int = int(total_updates / 16.67)
         restore_file = os.path.join(self.model_path, self.checkpoint)

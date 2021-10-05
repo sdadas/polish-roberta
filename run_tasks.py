@@ -5,10 +5,13 @@ import fire
 import fcntl
 from datetime import datetime
 
+import torch.cuda
+
 from preprocess.processor import TaskProcessor
 from train.evaluator import TaskEvaluatorBuilder
 from tasks import *
 from train.trainer import TaskTrainer
+from train.writer import ModelWriter
 
 logging.basicConfig(format='%(asctime)s : %(message)s', level=logging.DEBUG)
 logging.root.setLevel(logging.DEBUG)
@@ -43,6 +46,10 @@ class TaskRunner(object):
         evaluator = builder.build()
         return evaluator.evaluate(self.task_id)
 
+    def save_model(self, output_dir: str):
+        writer = ModelWriter(self.task, self.model_dir)
+        writer.write_model(output_dir)
+
     def _count_train(self):
         return sum(1 for _ in self.task.read(self.input_dir, "train"))
 
@@ -59,7 +66,7 @@ class TaskRunner(object):
 def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed", lr: str="1e-5",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
               evaluation_only: bool=False, resample: str=None, seed: int=None, verbose=False,
-              ddp_backend: str=None, cpu_offload: bool=False, cv_folds: int=1):
+              ddp_backend: str=None, cpu_offload: bool=False, cv_folds: int=1, save_model_to: str=None):
     assert arch in ("roberta_base", "roberta_large", "bart_base", "bart_large", "xlmr.xl")
     params = locals()
     if tasks is None:
@@ -85,6 +92,8 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
                 runner.prepare_task(resample)
                 runner.train_task(train_epochs, fp16, lr, max_sentences, update_freq, ddp_backend, cpu_offload)
             sharded_model = ddp_backend == "fully_sharded" and cpu_offload
+            if save_model_to is not None:
+                runner.save_model(save_model_to)
             score = runner.evaluate_task(verbose, sharded_model)
             runner.log_score(task_name, task_run_id, params, score)
 
