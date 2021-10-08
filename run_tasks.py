@@ -1,11 +1,10 @@
+import logging
 import string
 from random import choice
 
 import fire
 import fcntl
 from datetime import datetime
-
-import torch.cuda
 
 from preprocess.processor import TaskProcessor
 from train.evaluator import TaskEvaluatorBuilder
@@ -41,8 +40,8 @@ class TaskRunner(object):
         trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
 
     def evaluate_task(self, verbose: bool=False, sharded_model: bool=False):
-        builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir, self.output_dir,
-                                       verbose=verbose, sharded_model=sharded_model)
+        builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir,
+                                       output_dir=self.output_dir, verbose=verbose, sharded_model=sharded_model)
         evaluator = builder.build()
         return evaluator.evaluate(self.task_id)
 
@@ -83,7 +82,7 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
         task = task_class()
         task_id = task_name.lower() + "_" + rand
         cross_validation = cv_folds > 1
-        task_runs = CrossValidatedTask.cv_folds(task, cv_folds) if cross_validation else [task]
+        task_runs = CrossValidatedTask.cv_folds(task, cv_folds, seed) if cross_validation else [task]
         for idx, task_run in enumerate(task_runs):
             task_run_id = task_id
             if cross_validation: task_run_id += f"-fold{idx}"

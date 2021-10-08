@@ -45,13 +45,16 @@ class TaskEvaluator(object):
     def _get_label(self, label):
         return self.model.task.label_dictionary.string([label + self.model.task.label_dictionary.nspecial])
 
-    def evaluate(self, task_id: str="sample_task"):
+    def generate_predictions(self):
         y_true = []
         y_pred = []
         logging.info("generating predictions for task %s", self.task.spec().output_dir)
         for record in self.task.read(self.data_path, "test"):
             y_true.append(self.get_true(record) if record.label is not None else None)
             y_pred.append(self.predict(record))
+        return y_true, y_pred
+
+    def evaluate_predictions(self, y_true, y_pred, task_id: str="sample_task"):
         if y_true[0] is None:
             logging.info("No test labels available, skipping evaluation for task %s", self.task.spec().output_dir)
             scores = {}
@@ -60,6 +63,10 @@ class TaskEvaluator(object):
             logging.info("scores = %s", scores.__repr__())
         self.save_results(y_pred, task_id)
         return scores
+
+    def evaluate(self, task_id: str="sample_task"):
+        y_true, y_pred = self.generate_predictions()
+        return self.evaluate_predictions(y_true, y_pred, task_id)
 
     def predict(self, record: DataExample, logits: bool=False):
         tokens = self.model.encode(*record.inputs)
@@ -90,7 +97,7 @@ class TaskEvaluator(object):
 
 class TaskEvaluatorBuilder(object):
 
-    def __init__(self, task: BaseTask, arch: str, model_dir: str, input_dir: str="data",
+    def __init__(self, task: BaseTask, arch: str, model_dir: str, input_dir: str="data", pre_trained_model=False,
                  output_dir: str="data_processed", verbose=False, sharded_model=False):
         self.task = task
         self.arch = arch
@@ -99,6 +106,7 @@ class TaskEvaluatorBuilder(object):
         self.output_dir = output_dir
         self.verbose = verbose
         self.model_name = os.path.basename(model_dir)
+        self.pre_trained_model = pre_trained_model
         self.task_output_dir: str = os.path.join(self.output_dir, f"{task.spec().output_path()}-bin")
         self.sharded_model = sharded_model
 
@@ -110,6 +118,9 @@ class TaskEvaluatorBuilder(object):
         if arch_type.startswith("xlmr"): arch_type = "roberta"
         model_class = model_classes[arch_type][0]
         spm_path = os.path.join(self.model_dir, "sentencepiece.bpe.model")
+        if self.pre_trained_model:
+            checkpoints_output_dir = self.model_dir
+            checkpoint_file = "model.pt"
         loaded = self.from_pretrained(
             model_name_or_path=checkpoints_output_dir,
             checkpoint_file=checkpoint_file,

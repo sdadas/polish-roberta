@@ -1,5 +1,4 @@
 import json
-import logging
 import random
 import os
 from itertools import chain
@@ -120,18 +119,20 @@ class BaseTask(ABC):
 
 class CrossValidatedTask(BaseTask):
 
-    def __init__(self, wrapped_task: BaseTask, num_folds: int=4):
+    def __init__(self, wrapped_task: BaseTask, num_folds: int=4, seed: int=None):
         self.wrapped_task: BaseTask = wrapped_task
         self.num_folds = num_folds
         self.folds = None
         self._spec = wrapped_task.spec()
         self.set_fold(0)
+        self.seed = seed
 
     def set_fold(self, fold: int):
         self.fold = fold
         self._spec.output_dir = f"{self._spec.task_dir}-fold{self.fold}"
 
     def _read_folds(self, data_path: str):
+        if self.seed is not None: random.seed(self.seed)
         data: List[DataExample] = []
         for record in self.wrapped_task.read(data_path, "train"):
             data.append(record)
@@ -154,8 +155,8 @@ class CrossValidatedTask(BaseTask):
             return [rec for rec in self.folds[self.fold]]
 
     @staticmethod
-    def cv_folds(wrapped_task: BaseTask, num_folds: int=4) -> Iterable[BaseTask]:
-        task = CrossValidatedTask(wrapped_task, num_folds)
+    def cv_folds(wrapped_task: BaseTask, num_folds: int=4, seed: int=None) -> Iterable[BaseTask]:
+        task = CrossValidatedTask(wrapped_task, num_folds, seed)
         for fold in range(num_folds):
             task.set_fold(fold)
             yield task

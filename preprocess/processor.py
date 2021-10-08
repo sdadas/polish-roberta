@@ -12,7 +12,7 @@ from tasks import BaseTask
 
 class TaskProcessor(object):
 
-    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str):
+    def __init__(self, task: BaseTask, data_path: str, output_path: str, model_path: str, resample: str=None):
         self.task: BaseTask = task
         self.data_path: str = data_path
         self.model_path = model_path
