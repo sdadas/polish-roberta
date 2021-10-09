@@ -9,6 +9,7 @@ import torch
 from fairseq import options, __version__ as fairseq_verison
 
 from tasks import BaseTask
+from train.reinit import BlockReinitializer
 
 
 class TaskTrainer(object):
@@ -30,8 +31,9 @@ class TaskTrainer(object):
         self.cpu_offload = cpu_offload if ddp_backend == "fully_sharded" else False
         self.cli_path = os.environ.get("CLI_PATH", "")
 
-    def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10, seed: int=None):
-        self._run_fairseq_train(seed, max_sentences=max_sentences, update_freq=update_freq, max_epoch=train_epochs)
+    def train(self, max_sentences: int=1, update_freq: int=16, train_epochs: int=10,
+              reinit_layers: int=None, seed: int=None):
+        self._run_fairseq_train(seed, max_sentences, update_freq, train_epochs, reinit_layers)
 
     def _remove_previous_checkpoints(self, checkpoint_path: str):
         pattern = os.path.join(checkpoint_path, "checkpoint*")
@@ -40,7 +42,13 @@ class TaskTrainer(object):
             logging.info("Removing old checkpoint file %s", checkpoint)
             os.remove(checkpoint)
 
-    def _run_fairseq_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10):
+    def _reinit_layers(self, reinit_layers: int):
+        logging.info("Re-initializing top %d encoder layers", reinit_layers)
+        reinitializer = BlockReinitializer(self.task, self.model_path, reinit_layers)
+        reinitializer.reinit()
+
+    def _run_fairseq_train(self, seed: int, max_sentences: int=16, update_freq: int=1, max_epoch: int=10,
+                           reinit_layers: int=None):
         if seed is None: seed = random.randint(0, 1_000_000)
         device_count = torch.cuda.device_count() if self.ddp_backend is not None else 1
         batch_size: int = max_sentences * update_freq * device_count
@@ -50,12 +58,14 @@ class TaskTrainer(object):
         assert os.path.exists(restore_file)
         checkpoint_path = os.path.join("checkpoints", self.model_name, self.task.spec().output_path())
         self._remove_previous_checkpoints(checkpoint_path)
+        if reinit_layers is not None and reinit_layers > 0:
+            self._reinit_layers(reinit_layers)
+            restore_file = os.path.join(checkpoint_path, "checkpoint_last.pt")
         arch = "roberta_prenorm" if self.arch.startswith("xlmr") else self.arch
         cmd = [
             self.task_data_path,
             "--restore-file", restore_file,
             "--seed", str(seed),
-            "--max-tokens", "4400",
             "--task", "sentence_prediction",
             "--reset-optimizer",
             "--reset-dataloader",

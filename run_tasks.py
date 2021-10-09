@@ -33,11 +33,11 @@ class TaskRunner(object):
         processor.prepare()
 
     def train_task(self, train_epochs: int, fp16: bool, lr: str, max_sentences: int, update_freq: int,
-                   ddp_backend: str, cpu_offload: bool):
+                   ddp_backend: str, cpu_offload: bool, reinit_layers: int):
         train_size = self._count_train()
         trainer = TaskTrainer(self.task, self.output_dir, self.model_dir, train_size, lr=lr,
                               arch=self.arch, fp16=fp16, ddp_backend=ddp_backend, cpu_offload=cpu_offload)
-        trainer.train(train_epochs=train_epochs, max_sentences=max_sentences, update_freq=update_freq)
+        trainer.train(max_sentences, update_freq, train_epochs, reinit_layers, self.seed)
 
     def evaluate_task(self, verbose: bool=False, sharded_model: bool=False):
         builder = TaskEvaluatorBuilder(self.task, self.arch, self.model_dir, self.input_dir,
@@ -64,8 +64,8 @@ class TaskRunner(object):
 
 def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str="data_processed", lr: str="1e-5",
               tasks: str=None, train_epochs: int=10, fp16: bool=False, max_sentences: int=1, update_freq: int=16,
-              evaluation_only: bool=False, resample: str=None, seed: int=None, verbose=False,
-              ddp_backend: str=None, cpu_offload: bool=False, cv_folds: int=1, save_model_to: str=None):
+              evaluation_only: bool=False, resample: str=None, seed: int=None, verbose=False, ddp_backend: str=None,
+              cpu_offload: bool=False, cv_folds: int=1, save_model_to: str=None, reinit_layers: int=None):
     assert arch in ("roberta_base", "roberta_large", "bart_base", "bart_large", "xlmr.xl")
     params = locals()
     if tasks is None:
@@ -89,7 +89,7 @@ def run_tasks(arch: str, model_dir: str, input_dir: str="data", output_dir: str=
             runner: TaskRunner = TaskRunner(task_run, task_run_id, input_dir, output_dir, model_dir, arch, seed)
             if not evaluation_only:
                 runner.prepare_task(resample)
-                runner.train_task(train_epochs, fp16, lr, max_sentences, update_freq, ddp_backend, cpu_offload)
+                runner.train_task(train_epochs, fp16, lr, max_sentences, update_freq, ddp_backend, cpu_offload, reinit_layers)
             sharded_model = ddp_backend == "fully_sharded" and cpu_offload
             if save_model_to is not None:
                 runner.save_model(save_model_to)
