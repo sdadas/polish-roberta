@@ -5,6 +5,7 @@ from typing import List, Callable
 
 import torch.cuda
 from fairseq import utils
+from fairseq.data.data_utils import collate_tokens
 from fairseq.models.bart import BARTModel
 from fairseq.models.roberta import RobertaModel, RobertaHubInterface
 from tasks import BaseTask, DataExample
@@ -69,13 +70,23 @@ class TaskEvaluator(object):
         return self.evaluate_predictions(y_true, y_pred, task_id)
 
     def predict(self, record: DataExample, logits: bool=False):
-        tokens = self.model.encode(*record.inputs)
-        if tokens.size()[0] > self.maxlen:
-            tokens = tokens[0:self.maxlen]
+        tokens = self.encode(record)
         prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits or self.logits)
         if self.log_predictions and record.label is not None: self.log_prediction(prediction, record)
         if logits: return prediction
         else: return self.get_pred(prediction)
+
+    def predict_batch(self, records: List[DataExample]):
+        encoded = [self.encode(record) for record in records]
+        batch = collate_tokens(encoded, pad_idx=1)
+        predictions = self.model.predict("sentence_classification_head", batch)
+        return [self.get_pred(pred) for _, pred in enumerate(predictions)]
+
+    def encode(self, record: DataExample):
+        tokens = self.model.encode(*record.inputs)
+        if tokens.size()[0] > self.maxlen:
+            tokens = tokens[0:self.maxlen]
+        return tokens
 
     def log_prediction(self, prediction, record: DataExample):
         y_pred = self.get_pred(prediction)
