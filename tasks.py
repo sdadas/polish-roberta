@@ -727,6 +727,17 @@ class PPCTask(BaseTask):
                 yield DataExample([sent1, sent2], label)
 
 
+class UMOWYTask(BaseTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("UMOWY", "classification", 2, 1)
+        self._spec.evaluation_metric = self._spec.binary_f1
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        return self.read_simple(data_path, split, separator="\t", label_first=True, normalize=False)
+
+
+
 TASKS = {
     # Polish tasks
     "WCCRS_HOTELS":    WCCRSHotelsTask,
@@ -744,6 +755,7 @@ TASKS = {
     "KLEJ-PSC":        KLEJPSCTask,
     "KLEJ-ECR":        KLEJECRRegressionTask,
     "PPC":             PPCTask,
+    "UMOWY":           UMOWYTask,
 
     # English tasks
     "GLUE-COLA":       GLUECoLATask,
