@@ -50,7 +50,9 @@ class TaskRunner(object):
         writer.write_model(output_dir)
 
     def _count_train(self):
-        return sum(1 for _ in self.task.read(self.input_dir, "train"))
+        train_path = os.path.join(self.output_dir, self.task.spec().output_path(), "train.input0")
+        with open(train_path, "r", encoding="utf-8") as train_file:
+            return len(train_file.readlines())
 
     def log_score(self, task_name: str, task_id: str, params: Dict, scores: Dict):
         now = datetime.now().strftime("%d/%m/%Y,%H:%M:%S")
