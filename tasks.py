@@ -737,6 +737,30 @@ class UMOWYTask(BaseTask):
         return self.read_simple(data_path, split, separator="\t", label_first=True, normalize=False)
 
 
+class UOKIKTask(BaseTask):
+
+    def __init__(self):
+        self._spec = TaskSpecification("UOKIK", "classification", 2, 1)
+        self._spec.evaluation_metric = self._spec.binary_f1
+        self._spec.no_dev_set = True
+
+    def read(self, data_path: str, split: str) -> Iterable[DataExample]:
+        split_path = self.get_split_path(data_path, split, extension="csv")
+        classes = {"KLAUZULA_ABUZYWNA": "1", "BEZPIECZNE_POSTANOWIENIE_UMOWNE": "0"}
+        cl = [clazz for clazz, clazz_id in classes.items()]
+        with open(split_path, "r", encoding="utf-8") as input_file:
+            input_file.readline() # skip first line
+            for line in input_file:
+                line = line.strip()
+                assert cl[0] in line or cl[1] in line, line
+                for clazz, clazz_id in classes.items():
+                    if clazz in line:
+                        sent = line.replace(f"{clazz}", "")
+                        sent = sent.strip("\",;„”").replace("\"\"", "\"")
+                        label = clazz_id
+                        yield DataExample(sent, label)
+
+
 
 TASKS = {
     # Polish tasks

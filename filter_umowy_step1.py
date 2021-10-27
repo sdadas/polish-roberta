@@ -51,5 +51,5 @@ class CCProcessor(object):
 
 
 if __name__ == '__main__':
-    proc = CCProcessor("/media/sdadas/Corsair/Datasets/CommonCrawl/data.txt", "roberta_base_fairseq")
+    proc = CCProcessor("/Datasets/CommonCrawl/data.txt", "roberta_base_fairseq")
     proc.filter_data()
