@@ -69,18 +69,19 @@ class TaskEvaluator(object):
         y_true, y_pred = self.generate_predictions()
         return self.evaluate_predictions(y_true, y_pred, task_id)
 
-    def predict(self, record: DataExample, logits: bool=False):
+    def predict(self, record: DataExample, logits: bool = False):
         tokens = self.encode(record)
         prediction = self.model.predict("sentence_classification_head", tokens, return_logits=logits or self.logits)
         if self.log_predictions and record.label is not None: self.log_prediction(prediction, record)
-        if logits: return prediction
+        if logits: return prediction.detach().cpu()
         else: return self.get_pred(prediction)
 
-    def predict_batch(self, records: List[DataExample]):
+    def predict_batch(self, records: List[DataExample], logits: bool = False):
         encoded = [self.encode(record) for record in records]
         batch = collate_tokens(encoded, pad_idx=1)
-        predictions = self.model.predict("sentence_classification_head", batch)
-        return [self.get_pred(pred) for _, pred in enumerate(predictions)]
+        predictions = self.model.predict("sentence_classification_head", batch, return_logits=logits or self.logits)
+        if logits: return predictions.detach().cpu()
+        else: return [self.get_pred(pred) for _, pred in enumerate(predictions)]
 
     def encode(self, record: DataExample):
         tokens = self.model.encode(*record.inputs)

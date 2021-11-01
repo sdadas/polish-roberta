@@ -8,9 +8,9 @@ from sentencepiece import SentencePieceProcessor
 def spm_initializer(spm_path: str):
     global spm
     spm = SentencePieceProcessor()
-    spm.load(spm_path)
+    spm.Load(spm_path)
     global vocab
-    vocab = {index:spm.id_to_piece(index) for index in range(spm.GetPieceSize())}
+    vocab = {index:spm.IdToPiece(index) for index in range(spm.GetPieceSize())}
 
 def spm_process(doc: List[str], max_length: int=None):
     return [" ".join([vocab.get(val) for val in encode_tokens(sent, max_length)]) for sent in doc]
@@ -19,7 +19,7 @@ def spm_process_ids(doc: List[str], max_length: int=None):
     return [" ".join([str(val) for val in encode_tokens(sent, max_length)]) for sent in doc]
 
 def encode_tokens(sent: str, max_length: int=None):
-    res = [val for val in spm.encode_as_ids(sent)]
+    res = [val for val in spm.EncodeAsIds(sent)]
     if max_length is not None:
         res = res[0:max_length]
     return res
