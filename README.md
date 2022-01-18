@@ -1,7 +1,13 @@
 ### Polish RoBERTa
 This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692) models for Polish as well as evaluation code for several Polish linguistic tasks. The released models were trained using [Fairseq toolkit](https://github.com/pytorch/fairseq) in the National Information Processing Institute, Warsaw, Poland. We provide two models based on BERT base and BERT large architectures. Two versions of each model are available: one for [Fairseq](https://github.com/pytorch/fairseq) and one for [Huggingface Transformers](https://github.com/huggingface/transformers).
 
+#### Updates
+
+**18.01.2022** - We release the second version of the large model. This version has been trained using the same procedure as RoBERTa‑base-v2: unigram tokenizer, whole word masking, more update steps with lower batch size. We also utilised larger vocabulary of 128k entries.
+
 **21.03.2021** - We release a new version of the base model. The updated model has been trained on the same corpus as the original model but we used different hyperparameters. We made the following changes: 1) Sentencepiece Unigram model was used instead of BPE, 2) The model was trained with whole-word masking objective instead of classic token masking, 3) We utilized the full context of 512 tokens so training examples could include more than one sentence (the original model was trained on single sencentes only), 4) Longer pretraining (400k steps).
+
+#### Models
 
 <table>
 <thead>
@@ -54,6 +60,20 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   </td>
   <td>
   <a href="https://github.com/sdadas/polish-roberta/releases/download/models-transformers-v3.4.0/roberta_large_transformers.zip">v3.4</a>
+  </td>
+</tr>
+<tr>
+  <td>RoBERTa&#8209;v2&nbsp;(large)</td>
+  <td>24&nbsp;/&nbsp;1024&nbsp;/&nbsp;16</td>
+  <td>2k</td>
+  <td>400k</td>
+  <td>~200GB</td>
+  <td>88.87</td>
+  <td>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-v2/roberta_large_fairseq.zip">v0.10.2</a>
+  </td>
+  <td>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-v2/roberta_large_transformers.zip">v4.14</a>
   </td>
 </tr>
 </table>
@@ -177,9 +197,20 @@ Table 2. KLEJ results for RoBERTa-v2 base model
 
 Table 3. KLEJ results for RoBERTa large model
 
+| Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
+|---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
+| 1       |   95.82  |  94.10 |  95.02 | 74.54 |     93.07    |     85.43     | 76.70 | 98.47 | 89.24 |  **89.15**  |
+| 2       |   95.72  |  93.90 |  95.10 | 74.55 |     93.49    |     84.01     | 74.71 | 98.93 | 89.02 |  **88.83**  |
+| 3       |   95.43  |  94.30 |  95.36 | 70.97 |     93.21    |     82.59     | 76.61 | 98.15 | 89.31 |  **88.44**  |
+| 4       |   95.97  |  94.40 |  95.12 | 75.10 |     92.80    |     85.83     | 74.05 | 98.93 | 89.14 |  **89.04**  |
+| 5       |   95.92  |  94.70 |  95.09 | 75.66 |     93.07    |     82.79     | 75.35 | 98.62 | 88.78 |  **88.89**  |
+| **Avg** |**95.77** | **94.28** |  **95.14** | **74.16** | **93.13** | **84.13** | **75.48** | **98.62** | **89.10** |  **88.87**  |
+
+Table 3. KLEJ results for RoBERTa-v2 large model
+
 #### Evaluation results on other tasks
 
-| Task                 | Task type                   | Metric |Base model                  | Large model                  |
+| Task                 | Task type                   | Metric |Base model (v1)                  | Large model (v1)                 |
 |----------------------|-----------------------------|--------|-----------------------------|------------------------------|
 | [SICK-E](https://github.com/sdadas/polish-sentence-evaluation/tree/master/resources/downstream) | Textual entailment     | Accuracy | 86.13    |  87.67|
 | [SICK-R](https://github.com/sdadas/polish-sentence-evaluation/tree/master/resources/downstream) | Semantic relatedness        | Spearman correlation | 82.26    |  85.63  |
