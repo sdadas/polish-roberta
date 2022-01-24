@@ -3,6 +3,8 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 
 #### Updates
 
+**24.01.2022** - Polish DistilRoBERTa model added. The model was trained using [knowledge distillation](https://arxiv.org/abs/1910.01108) with RoBERTa-v2 base as a teacher model. Distilled version has only has only half the encoder blocks of the original model, so it is suitable for deployment on devices with limited resources such as smartphones.
+
 **18.01.2022** - We release the second version of the large model. This version has been trained using the same procedure as RoBERTa‑base-v2: unigram tokenizer, whole word masking, more update steps with lower batch size. We also utilised larger vocabulary of 128k entries.
 
 **21.03.2021** - We release a new version of the base model. The updated model has been trained on the same corpus as the original model but we used different hyperparameters. We made the following changes: 1) Sentencepiece Unigram model was used instead of BPE, 2) The model was trained with whole-word masking objective instead of classic token masking, 3) We utilized the full context of 512 tokens so training examples could include more than one sentence (the original model was trained on single sencentes only), 4) Longer pretraining (400k steps).
@@ -74,6 +76,20 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   </td>
   <td>
   <a href="https://github.com/sdadas/polish-roberta/releases/download/models-v2/roberta_large_transformers.zip">v4.14</a>
+  </td>
+</tr>
+  <tr>
+  <td>DistilRoBERTa</td>
+  <td>6&nbsp;/&nbsp;768&nbsp;/&nbsp;12</td>
+  <td>1k</td>
+  <td>10 epochs</td>
+  <td>~20GB</td>
+  <td>84.55</td>
+  <td>
+  n/a
+  </td>
+  <td>
+  <a href="https://github.com/sdadas/polish-roberta/releases/download/models-v2/distilroberta_transformers.zip">v4.13</a>
   </td>
 </tr>
 </table>
@@ -164,6 +180,9 @@ python run_tasks.py --arch roberta_base --model_dir roberta_base_fairseq --train
 Below we show the evaluation results of our models on the tasks included in [KLEJ Benchmark](https://klejbenchmark.com/). We fine-tuned both models 5 times for each task.
 Detailed scores for each run and averaged scores are presented in Table 1 and Table 2.
 
+<details>
+  <summary>Table 1. KLEJ results for RoBERTa base model</summary>
+  
 | Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
 |---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
 | 1       |   93.15  |  93.30 |  94.26 | 66.67 |     91.97    |     78.74     | 66.86 | 98.63 | 87.75 |  **85.70**  |
@@ -172,9 +191,11 @@ Detailed scores for each run and averaged scores are presented in Table 1 and Ta
 | 4       |   93.97  |  94.70 |  93.98 | 63.81 |     90.44    |     76.32     | 65.18 | 99.39 | 87.58 |  **85.04**  |
 | 5       |   93.63  |  94.00 |  93.96 | 65.95 |     90.58    |     74.09     | 65.92 | 98.48 | 87.08 |  **84.85**  |
 | **Avg** |**93.78** | **94.08** |  **94.04** | **66.77** | **91.00** | **76.40** | **65.92** | **98.90** | **87.62** |  **85.39**  |
+</details>
 
-Table 1. KLEJ results for RoBERTa base model
-
+<details>
+  <summary>Table 2. KLEJ results for RoBERTa-v2 base model</summary>
+  
 | Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
 |---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
 | 1       |   94.80  |  94.20 |  94.30 | 69.62 |     90.58    |     78.74     | 71.23 | 98.62 | 87.99 |  **86.68**  |
@@ -183,9 +204,11 @@ Table 1. KLEJ results for RoBERTa base model
 | 4       |   94.07  |  93.90 |  94.58 | 70.00 |     91.00    |     78.14     | 69.94 | 98.93 | 87.22 |  **86.42**  |
 | 5       |   94.31  |  94.20 |  94.71 | 70.46 |     91.00    |     77.94     | 71.67 | 98.48 | 88.15 |  **86.77**  |
 | **Avg** |**94.24** | **94.22** |  **94.54** | **70.28** | **90.83** | **78.38** | **71.38** | **98.81** | **87.80** |  **86.72**  |
+</details>
 
-Table 2. KLEJ results for RoBERTa-v2 base model
-
+<details>
+  <summary>Table 3. KLEJ results for RoBERTa large model</summary>
+  
 | Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
 |---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
 | 1       |   94.31  |  93.50 |  94.63 | 72.39 |     92.80    |     80.54     | 71.87 | 98.63 | 88.82 |  **87.50**  |
@@ -194,9 +217,11 @@ Table 2. KLEJ results for RoBERTa-v2 base model
 | 4       |   94.46  |  93.20 |  94.96 | 71.08 |     92.80    |     82.39     | 70.59 | 99.09 | 88.60 |  **87.46**  |
 | 5       |   94.46  |  93.00 |  94.82 | 69.83 |     92.11    |     83.00     | 74.85 | 98.79 | 88.65 |  **87.72**  |
 | **Avg** |**94.72** | **93.38** |  **94.79** | **70.94** | **92.38** | **82.14** | **73.21** | **98.82** | **88.87** |  **87.69**  |
+</details>
 
-Table 3. KLEJ results for RoBERTa large model
-
+<details>
+  <summary>Table 4. KLEJ results for RoBERTa-v2 large model</summary>
+  
 | Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
 |---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
 | 1       |   95.82  |  94.10 |  95.02 | 74.54 |     93.07    |     85.43     | 76.70 | 98.47 | 89.24 |  **89.15**  |
@@ -205,8 +230,20 @@ Table 3. KLEJ results for RoBERTa large model
 | 4       |   95.97  |  94.40 |  95.12 | 75.10 |     92.80    |     85.83     | 74.05 | 98.93 | 89.14 |  **89.04**  |
 | 5       |   95.92  |  94.70 |  95.09 | 75.66 |     93.07    |     82.79     | 75.35 | 98.62 | 88.78 |  **88.89**  |
 | **Avg** |**95.77** | **94.28** |  **95.14** | **74.16** | **93.13** | **84.13** | **75.48** | **98.62** | **89.10** |  **88.87**  |
+</details>
 
-Table 3. KLEJ results for RoBERTa-v2 large model
+<details>
+  <summary>Table 5. KLEJ results for DistilRoBERTa model</summary>
+  
+| Run     | NKJP | CDSC&#8209;E | CDSC&#8209;R | CBD   | PolEmo&#8209;IN | PolEmo&#8209;OUT | DYK   | PSC   | AR    | Avg     |
+|---------|----------|--------|--------|-------|--------------|---------------|-------|-------|-------|---------|
+| 1       |   93.54  |  93.00 |  93.57 | 67.60 |     88.78    |     77.53     | 61.79 | 93.59 | 87.54 |  **84.10**  |
+| 2       |   93.78  |  92.30 |  93.54 | 69.20 |     90.03    |     78.95     | 61.98 | 95.92 | 87.23 |  **84.77**  |
+| 3       |   93.15  |  93.20 |  93.55 | 68.47 |     89.61    |     79.15     | 60.05 | 95.15 | 87.19 |  **84.39**  |
+| 4       |   93.29  |  93.30 |  93.30 | 68.99 |     90.17    |     78.34     | 62.18 | 95.80 | 86.83 |  **84.69**  |
+| 5       |   93.68  |  93.40 |  93.62 | 69.57 |     90.44    |     77.73     | 61.11 | 96.26 | 87.44 |  **84.81**  |
+| **Avg** |**93.49** | **93.04** |  **93.52** | **68.77** | **89.81** | **78.34** | **61.42** | **95.35** | **87.24** |  **84.55**  |
+</details>
 
 #### Evaluation results on other tasks
 
