@@ -82,7 +82,7 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
   <td>DistilRoBERTa</td>
   <td>6&nbsp;/&nbsp;768&nbsp;/&nbsp;12</td>
   <td>1k</td>
-  <td>10 epochs</td>
+  <td>10ep.</td>
   <td>~20GB</td>
   <td>84.55</td>
   <td>
