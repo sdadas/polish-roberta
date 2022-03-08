@@ -3,7 +3,9 @@ This repository contains pre-trained [RoBERTa](https://arxiv.org/abs/1907.11692)
 
 #### Updates
 
-**19.02.2022** - The models are now available on [Huggingface Hub](https://huggingface.co/sdadas).
+**08.03.2022** - [Base](https://huggingface.co/sdadas/polish-longformer-base-4096) and [Large](https://huggingface.co/sdadas/polish-longformer-large-4096) Polish Longformer models have been added to the [Huggingface Hub](https://huggingface.co/sdadas). The models were initialized with Polish RoBERTa (v2) weights and then fine-tuned on a corpus of long documents, ranging from 1024 to 4096 tokens.
+
+**19.02.2022** - The models are now available on the [Huggingface Hub](https://huggingface.co/sdadas).
 
 **24.01.2022** - Polish DistilRoBERTa model added. The model was trained using [knowledge distillation](https://arxiv.org/abs/1910.01108) with RoBERTa-v2 base as a teacher model. Distilled version has only has only half the encoder blocks of the original model, so it is suitable for deployment on devices with limited resources such as smartphones.
 
